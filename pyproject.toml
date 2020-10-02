@@ -20,6 +20,8 @@ jupyterlab = "^2.2.8"
 ipywidgets = "^7.5.1"
 xlrd = "^1.2.0"
 nltk = "^3.5"
+wikidataintegrator = "^0.7.4"
+pyjsg = "^0.10.0"
 
 [tool.poetry.dev-dependencies]
 python-language-server = "^0.35.1"
