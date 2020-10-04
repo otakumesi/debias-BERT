@@ -10,8 +10,8 @@ class DebiasLoss(nn.Module):
 
     def forward(self,
                 inputs: Iterable[Dict[str, Tensor]],
-                first_ids: List[Tensor],
-                second_ids: List[Tensor]):
+                first_ids: Tensor,
+                second_ids: Tensor):
         mask_indeces = inputs.pop('mask_idx')
         outputs = self.model(**inputs, return_dict = True)
         logits = outputs.logits
