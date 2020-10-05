@@ -1,3 +1,5 @@
+ATTR_NOUNS = 'data/attributes.txt'
+
 def main():
     pass
 
