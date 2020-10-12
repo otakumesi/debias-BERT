@@ -40,4 +40,11 @@ class DataArguments:
 
 @dataclass
 class TrainingArguments:
-    pass
+    seed: int = field(
+        default=42,
+        metadata={'help': 'the number of random seed'}
+    )
+    weight_decay: int = field(
+        default=0.0,
+        metadata={'help': 'quantity of weight decay'}
+    )
