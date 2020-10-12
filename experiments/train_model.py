@@ -1,15 +1,17 @@
 import logging
 import random
 from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 from datasets import load_dataset
 from transformers import AutoModelWithLMHead, AutoConfig, AutoTokenizer
 from transformers import HfArgumentParser, Trainer
+from transformers import TrainingArguments
 import torch
 from torch.optim import SGD
 
-from arguments import ModelArguments, DataArguments, TrainingArguments
+from arguments import ModelArguments, DataArguments
 from models import DebiasLoss
 
 ARGS_JSON_FILE = 'args.json'
@@ -25,7 +27,7 @@ def train():
     np.random.seed(train_args.seed)
     torch.manual_seed(train_args.seed)
 
-    dataset = load_dataset('json', data_args.dataset_path)
+    dataset = load_dataset('json', data_files=data_args.dataset_path, field='data', split='train')
 
     # Load Transformers config
     if model_args.config_name:
@@ -45,42 +47,49 @@ def train():
         cache_dir=model_args.cache_dir)
     loss = DebiasLoss(model)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+    loss.to(train_args.device)
 
     n_gpu = torch.cuda.device_count()
     if n_gpu > 0:
         torch.cuda.manual_seed_all(train_args.seed)
     if n_gpu > 1:
-        model = torch.nn.DataParallel(model)
+        loss = torch.nn.DataParallel(loss)
 
-    dataset.map(lambda example: {f'biased_{k}':v for k, v in tokenizer(example['biased_sentence'])})
-    dataset.map(lambda example: {f'base_{k}':v for k, v in tokenizer(example['standard_sentence'])})
+    dataset = dataset.map(lambda example: {f'biased_{k}':v for k, v in tokenizer(example['biased_sentence']).items()})
+    dataset = dataset.map(lambda example: {f'base_{k}':v for k, v in tokenizer(example['base_sentence']).items()})
+    dataset = dataset.map(lambda example: {'mask_indeces': example['biased_input_ids'].index(tokenizer.mask_token_id)})
 
-    dataset.map(lambda example: {'first_ids': tokenizer.convert_tokens_to_ids(example['targets'][0])})
-    dataset.map(lambda example: {'second_ids': tokenizer.convert_tokens_to_ids(example['targets'][1])})
+    dataset = dataset.map(lambda example: {'first_ids': tokenizer.convert_tokens_to_ids(example['targets'][0]),
+                                           'second_ids': tokenizer.convert_tokens_to_ids(example['targets'][1])})
+
+    simple_columns = ['input_ids', 'token_type_ids', 'attention_mask']
+    columns = [f'biased_{c}' for c in simple_columns] + [f'base_{c}' for c in simple_columns] + ['first_ids', 'second_ids', 'mask_indeces']
+    dataset.set_format(type='torch', columns=columns)
 
     no_decay = ['bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [
         {
-            "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+            "params": [p for n, p in loss.named_parameters() if not any(nd in n for nd in no_decay)],
             "weight_decay": train_args.weight_decay
         },
         {
-            "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+            "params": [p for n, p in loss.named_parameters() if any(nd in n for nd in no_decay)],
             "weight_decay": 0.0
         }
     ]
 
     trainer = Trainer(
-        model=model,
+        model=loss,
         args=train_args,
         train_dataset=dataset,
-        optimizers=(SGD([optimizer_grouped_parameters], lr=train_args.learning_rate)),
+        optimizers=(SGD(optimizer_grouped_parameters, lr=train_args.learning_rate), None),
     )
 
     trainer.train()
-    trainer.save_model(train_args.output_dir)
+
+    output_path = Path(train_args.output_dir) / TIMESAMP
+    output_path.mkdir(parents=True, exist_ok=True)
+    trainer.save_model(output_path)
 
 
 if __name__ == '__main__':

@@ -11,17 +11,19 @@ class DebiasLoss(nn.Module):
         self.model = model
 
     def forward(self,
-                inputs: Iterable[Dict[str, Tensor]],
+                mask_indeces: Tensor,
                 first_ids: Tensor,
                 second_ids: Tensor,
-                biased_prefix: str = 'biased_',
-                base_prefix: str = 'base_'
+                biased_input_ids: Tensor,
+                biased_token_type_ids: Tensor,
+                biased_attention_mask: Tensor,
+                base_input_ids: Tensor,
+                base_token_type_ids: Tensor,
+                base_attention_mask: Tensor
     ):
 
-        mask_indeces = inputs.pop('mask_idx')
-
-        biased_log_probs = self.calc_log_probs(inputs, biased_prefix)
-        base_log_probs = self.calc_log_probs(inputs, base_prefix)
+        biased_log_probs = self.calc_log_probs(biased_input_ids, biased_token_type_ids, biased_attention_mask)
+        base_log_probs = self.calc_log_probs(base_input_ids, base_token_type_ids, base_attention_mask)
 
         mask_indeces = mask_indeces.view(-1, 1)
         biased_mask_log_probs = biased_log_probs.gather(index=mask_indeces, dim=1)
@@ -34,11 +36,11 @@ class DebiasLoss(nn.Module):
                                                                          base_mask_log_probs,
                                                                          second_ids)
 
-        return F.mse_loss(first_increased_log_probs - second_increased_log_probs)
+        return (F.mse_loss(first_increased_log_probs - second_increased_log_probs),)
 
-    def calc_log_probs(self, inputs, prefix):
-        target_inputs = extract_kv_by_prefix(inputs, prefix)
-        outputs = self.model(**target_inputs, return_dict = True)
+    def calc_log_probs(self, input_ids, token_type_ids, attention_mask):
+        inputs = {"input_ids": input_ids, "token_type_ids": token_type_ids, "attention_mask": attention_mask}
+        outputs = self.model(**inputs, return_dict = True)
         logits = outputs.logits
         return F.log_softmax(logits)
 

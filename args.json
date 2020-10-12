@@ -1,0 +1,8 @@
+{
+  "model_name_or_path": "bert-base-uncased",
+  "dataset_path": "data/debias_sents.json",
+  "seed": 42,
+  "output_dir": "runs/models",
+  "learning_rate": 5e-7,
+  "dataset_length": 10
+}

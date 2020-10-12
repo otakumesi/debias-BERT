@@ -34,6 +34,8 @@ def main():
 
     attrs = [add_article(attr.rstrip('\n').lower()) for attr in attrs]
 
+    results = []
+
     for sbjs in subjects:
         for attr in attrs:
             for sent in TEMPLATE_SENTENCES:
@@ -43,12 +45,11 @@ def main():
                     mask = '[MASK]'
                 biased_sent = sent.format(target = mask, occupation = attr)
                 standard_sent = sent.format(target = mask, occupation = 'the [MASK]')
-                dumped = json.dumps({'biased_sentence': biased_sent,
-                           'standard_sent': standard_sent,
-                           'targets': sbjs},
-                          indent=4)
-                print(dumped)
+                results.append({'biased_sentence': biased_sent,
+                                'base_sentence': standard_sent,
+                                'targets': sbjs})
 
+    print(json.dumps({'data': results}))
 
 if __name__ == '__main__':
     main()

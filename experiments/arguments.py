@@ -1,6 +1,8 @@
 from typing import Optional
 from dataclasses import dataclass, field
 
+import torch
+
 
 @dataclass
 class ModelArguments:
@@ -15,10 +17,6 @@ class ModelArguments:
     tokenizer_name: Optional[str] = field(
         default=None,
         metadata={'help': 'Pretrained tokenizer name or path if not the same as model_name'}
-    )
-    evaluation_method: str = field(
-        default='mask_pred_score',
-        metadata={'help': 'Evaluation method to pass Integrated Gradients. Ex. mask_pred_score, same_target_loss, another_target_loss'}
     )
     cache_dir: Optional[str] = field(
         default=None,
@@ -35,16 +33,4 @@ class DataArguments:
     dataset_length: Optional[int]= field(
         default=None,
         metadata={'help': 'Number to use data on your task.'}
-    )
-
-
-@dataclass
-class TrainingArguments:
-    seed: int = field(
-        default=42,
-        metadata={'help': 'the number of random seed'}
-    )
-    weight_decay: int = field(
-        default=0.0,
-        metadata={'help': 'quantity of weight decay'}
     )
