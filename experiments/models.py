@@ -25,9 +25,9 @@ class DebiasLoss(nn.Module):
         biased_log_probs = self.calc_log_probs(biased_input_ids, biased_token_type_ids, biased_attention_mask)
         base_log_probs = self.calc_log_probs(base_input_ids, base_token_type_ids, base_attention_mask)
 
-        mask_indeces = mask_indeces.view(-1, 1)
-        biased_mask_log_probs = biased_log_probs.gather(index=mask_indeces, dim=1)
-        base_mask_log_probs = base_log_probs.gather(index=mask_indeces, dim=1)
+        mask_indeces = mask_indeces.view(-1, 1, 1)
+        biased_mask_log_probs = biased_log_probs.gather(index=mask_indeces.repeat(1, 1, biased_log_probs.shape[2]), dim=1)
+        base_mask_log_probs = base_log_probs.gather(index=mask_indeces.repeat(1, 1, base_log_probs.shape[2]), dim=1)
 
         first_increased_log_probs = self.calc_increased_log_prob_scores(biased_mask_log_probs,
                                                                         base_mask_log_probs,
@@ -36,7 +36,7 @@ class DebiasLoss(nn.Module):
                                                                          base_mask_log_probs,
                                                                          second_ids)
 
-        return (F.mse_loss(first_increased_log_probs - second_increased_log_probs),)
+        return (F.mse_loss(first_increased_log_probs, second_increased_log_probs),)
 
     def calc_log_probs(self, input_ids, token_type_ids, attention_mask):
         inputs = {"input_ids": input_ids, "token_type_ids": token_type_ids, "attention_mask": attention_mask}
@@ -49,7 +49,7 @@ class DebiasLoss(nn.Module):
                                        biased_mask_log_probs,
                                        base_mask_log_probs,
                                        target_ids):
-        target_ids.view(-1, 1)
+        target_ids = target_ids.view(-1, 1, 1)
         p_tgt = biased_mask_log_probs.gather(index=target_ids, dim=2)
         p_prior = base_mask_log_probs.gather(index=target_ids, dim=2)
         return p_tgt - p_prior

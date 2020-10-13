@@ -55,8 +55,8 @@ def train():
     if n_gpu > 1:
         loss = torch.nn.DataParallel(loss)
 
-    dataset = dataset.map(lambda example: {f'biased_{k}':v for k, v in tokenizer(example['biased_sentence']).items()})
-    dataset = dataset.map(lambda example: {f'base_{k}':v for k, v in tokenizer(example['base_sentence']).items()})
+    dataset = dataset.map(lambda example: {f'biased_{k}':v for k, v in tokenizer(example['biased_sentence'], max_length=20, padding='max_length').items()})
+    dataset = dataset.map(lambda example: {f'base_{k}':v for k, v in tokenizer(example['base_sentence'], max_length=20, padding='max_length').items()})
     dataset = dataset.map(lambda example: {'mask_indeces': example['biased_input_ids'].index(tokenizer.mask_token_id)})
 
     dataset = dataset.map(lambda example: {'first_ids': tokenizer.convert_tokens_to_ids(example['targets'][0]),
