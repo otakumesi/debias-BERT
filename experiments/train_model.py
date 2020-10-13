@@ -69,7 +69,7 @@ def train():
     if n_gpu > 1:
         loss = torch.nn.DataParallel(loss)
 
-    MAX_LEN = 30
+    MAX_LEN = 50
     dataset = dataset.map(lambda example: {f'biased_{k}':v for k, v in tokenizer(example['biased_sentence'], max_length=MAX_LEN, padding='max_length').items()})
     dataset = dataset.map(lambda example: {f'base_{k}':v for k, v in tokenizer(example['base_sentence'], max_length=MAX_LEN, padding='max_length').items()})
     dataset = dataset.map(lambda example: {'mask_indeces': example['biased_input_ids'].index(tokenizer.mask_token_id)})
@@ -105,10 +105,6 @@ def train():
     output_path = Path(train_args.output_dir) / TIMESAMP
     output_path.mkdir(parents=True, exist_ok=True)
     trainer.save_model(output_path)
-    experiment = ExistingExperiment(api_key=API_KEY,
-                            workspace=WORKSPACE,
-                            project_name=PROJECT_NAME)
-
     experiment.log_model('DebiasBERT', output_path)
 
 
