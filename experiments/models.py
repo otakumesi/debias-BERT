@@ -7,8 +7,9 @@ from utils import extract_kv_by_prefix
 
 class DebiasLoss(nn.Module):
     def __init__(self, model: nn.Module, config: Any):
-        super(DebiasLoss, self).__init__(config)
+        super(DebiasLoss, self).__init__()
         self.model = model
+        self.config = config
 
     def forward(self,
                 mask_indeces: Tensor,

@@ -33,8 +33,7 @@ def train():
     experiment = Experiment(api_key=API_KEY,
                             workspace=WORKSPACE,
                             project_name=PROJECT_NAME,
-                            auto_output_logging='simple',
-                            disabled=True)
+                            auto_output_logging='simple')
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, train_args = parser.parse_json_file(ARGS_JSON_FILE)
     experiment.log_parameters(train_args)
@@ -78,8 +77,6 @@ def train():
 
     dataset = dataset.map(lambda example: {'first_ids': tokenizer.convert_tokens_to_ids(example['targets'][0]),
                                            'second_ids': tokenizer.convert_tokens_to_ids(example['targets'][1])})
-
-    import ipdb; ipdb.set_trace()
 
     simple_columns = ['input_ids', 'token_type_ids', 'attention_mask']
     columns = [f'biased_{c}' for c in simple_columns] + [f'base_{c}' for c in simple_columns] + ['first_ids', 'second_ids', 'mask_indeces']
