@@ -33,7 +33,8 @@ def train():
     experiment = Experiment(api_key=API_KEY,
                             workspace=WORKSPACE,
                             project_name=PROJECT_NAME,
-                            auto_output_logging='simple')
+                            auto_output_logging='simple',
+                            disabled=True)
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, train_args = parser.parse_json_file(ARGS_JSON_FILE)
     experiment.log_parameters(train_args)
@@ -60,7 +61,7 @@ def train():
         model_args.model_name_or_path,
         config=config,
         cache_dir=model_args.cache_dir)
-    loss = DebiasLoss(model)
+    loss = DebiasLoss(model, config)
 
     loss.to(train_args.device)
 
@@ -77,6 +78,8 @@ def train():
 
     dataset = dataset.map(lambda example: {'first_ids': tokenizer.convert_tokens_to_ids(example['targets'][0]),
                                            'second_ids': tokenizer.convert_tokens_to_ids(example['targets'][1])})
+
+    import ipdb; ipdb.set_trace()
 
     simple_columns = ['input_ids', 'token_type_ids', 'attention_mask']
     columns = [f'biased_{c}' for c in simple_columns] + [f'base_{c}' for c in simple_columns] + ['first_ids', 'second_ids', 'mask_indeces']
@@ -106,6 +109,7 @@ def train():
     output_path = Path(train_args.output_dir) / TIMESAMP
     output_path.mkdir(parents=True, exist_ok=True)
     trainer.save_model(output_path)
+    experiment.log_model('DebiasBERT', output_path)
 
 
 if __name__ == '__main__':

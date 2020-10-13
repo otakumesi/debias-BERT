@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Iterable
+from typing import List, Tuple, Dict, Iterable, Any
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
@@ -6,8 +6,8 @@ import torch.nn.functional as F
 from utils import extract_kv_by_prefix
 
 class DebiasLoss(nn.Module):
-    def __init__(self, model: nn.Module):
-        super(DebiasLoss, self).__init__()
+    def __init__(self, model: nn.Module, config: Any):
+        super(DebiasLoss, self).__init__(config)
         self.model = model
 
     def forward(self,
