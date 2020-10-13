@@ -28,6 +28,10 @@ API_KEY = os.getenv('COMET_API_KEY')
 WORKSPACE = os.getenv('COMET_WORKSPACE')
 PROJECT_NAME = os.getenv('COMET_PROJECT_NAME')
 
+experiment = Experiment(api_key=API_KEY,
+                        workspace=WORKSPACE,
+                        project_name=PROJECT_NAME,
+                        auto_output_logging='simple')
 
 def train():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
@@ -103,8 +107,7 @@ def train():
     trainer.save_model(output_path)
     experiment = ExistingExperiment(api_key=API_KEY,
                             workspace=WORKSPACE,
-                            project_name=PROJECT_NAME,
-                            auto_output_logging='simple')
+                            project_name=PROJECT_NAME)
 
     experiment.log_model('DebiasBERT', output_path)
 
