@@ -30,10 +30,10 @@ PROJECT_NAME = os.getenv('COMET_PROJECT_NAME')
 
 
 def train():
-    experiment = Experiment(api_key=API_KEY,
-                            workspace=WORKSPACE,
-                            project_name=PROJECT_NAME,
-                            auto_output_logging='simple')
+    # experiment = Experiment(api_key=API_KEY,
+    #                         workspace=WORKSPACE,
+    #                         project_name=PROJECT_NAME,
+    #                         auto_output_logging='simple')
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, train_args = parser.parse_json_file(ARGS_JSON_FILE)
     experiment.log_parameters(train_args)
@@ -94,20 +94,19 @@ def train():
         }
     ]
 
-    with experiment.train():
-        trainer = Trainer(
-            model=loss,
-            args=train_args,
-            train_dataset=dataset,
-            optimizers=(SGD(optimizer_grouped_parameters, lr=train_args.learning_rate), None),
-        )
+    trainer = Trainer(
+        model=loss,
+        args=train_args,
+        train_dataset=dataset,
+        optimizers=(SGD(optimizer_grouped_parameters, lr=train_args.learning_rate), None),
+    )
 
-        trainer.train()
+    trainer.train()
 
-        output_path = Path(train_args.output_dir) / TIMESAMP
-        output_path.mkdir(parents=True, exist_ok=True)
-        trainer.save_model(output_path)
-        experiment.log_model('DebiasBERT', output_path)
+    output_path = Path(train_args.output_dir) / TIMESAMP
+    output_path.mkdir(parents=True, exist_ok=True)
+    trainer.save_model(output_path)
+    experiment.log_model('DebiasBERT', output_path)
 
 
 if __name__ == '__main__':
