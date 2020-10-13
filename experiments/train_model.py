@@ -30,13 +30,8 @@ PROJECT_NAME = os.getenv('COMET_PROJECT_NAME')
 
 
 def train():
-    # experiment = Experiment(api_key=API_KEY,
-    #                         workspace=WORKSPACE,
-    #                         project_name=PROJECT_NAME,
-    #                         auto_output_logging='simple')
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, train_args = parser.parse_json_file(ARGS_JSON_FILE)
-    experiment.log_parameters(train_args)
 
     random.seed(train_args.seed)
     np.random.seed(train_args.seed)
@@ -106,6 +101,11 @@ def train():
     output_path = Path(train_args.output_dir) / TIMESAMP
     output_path.mkdir(parents=True, exist_ok=True)
     trainer.save_model(output_path)
+    experiment = ExistingExperiment(api_key=API_KEY,
+                            workspace=WORKSPACE,
+                            project_name=PROJECT_NAME,
+                            auto_output_logging='simple')
+
     experiment.log_model('DebiasBERT', output_path)
 
 
