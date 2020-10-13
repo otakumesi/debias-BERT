@@ -1,3 +1,6 @@
+from comet_ml import Experiment
+
+import os
 import logging
 import random
 from datetime import datetime
@@ -10,6 +13,7 @@ from transformers import HfArgumentParser, Trainer
 from transformers import TrainingArguments
 import torch
 from torch.optim import SGD
+from dotenv import load_dotenv
 
 from arguments import ModelArguments, DataArguments
 from models import DebiasLoss
@@ -18,10 +22,21 @@ ARGS_JSON_FILE = 'args.json'
 TIMESTAMP = datetime.now().strftime('%Y%m%d_%H%M%S')
 logging.basicConfig(level=logging.INFO)
 
+load_dotenv()
+
+API_KEY = os.getenv('COMET_API_KEY')
+WORKSPACE = os.getenv('COMET_WORKSPACE')
+PROJECT_NAME = os.getenv('COMET_PROJECT_NAME')
+
 
 def train():
+    experiment = Experiment(api_key=API_KEY,
+                            workspace=WORKSPACE,
+                            project_name=PROJECT_NAME,
+                            auto_output_logging='simple')
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, train_args = parser.parse_json_file(ARGS_JSON_FILE)
+    experiment.log_parameters(train_args)
 
     random.seed(train_args.seed)
     np.random.seed(train_args.seed)
@@ -55,8 +70,9 @@ def train():
     if n_gpu > 1:
         loss = torch.nn.DataParallel(loss)
 
-    dataset = dataset.map(lambda example: {f'biased_{k}':v for k, v in tokenizer(example['biased_sentence'], max_length=20, padding='max_length').items()})
-    dataset = dataset.map(lambda example: {f'base_{k}':v for k, v in tokenizer(example['base_sentence'], max_length=20, padding='max_length').items()})
+    MAX_LEN = 30
+    dataset = dataset.map(lambda example: {f'biased_{k}':v for k, v in tokenizer(example['biased_sentence'], max_length=MAX_LEN, padding='max_length').items()})
+    dataset = dataset.map(lambda example: {f'base_{k}':v for k, v in tokenizer(example['base_sentence'], max_length=MAX_LEN, padding='max_length').items()})
     dataset = dataset.map(lambda example: {'mask_indeces': example['biased_input_ids'].index(tokenizer.mask_token_id)})
 
     dataset = dataset.map(lambda example: {'first_ids': tokenizer.convert_tokens_to_ids(example['targets'][0]),

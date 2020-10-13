@@ -12,6 +12,7 @@ six = "*"
 [[package]]
 category = "main"
 description = "Async http client/server framework (asyncio)"
+marker = "python_version >= \"3.6\""
 name = "aiohttp"
 optional = false
 python-versions = ">=3.5.3"
@@ -46,6 +47,7 @@ version = "1.4.4"
 [[package]]
 category = "main"
 description = "Disable App Nap on OS X 10.9"
+marker = "sys_platform == \"darwin\" or platform_system == \"Darwin\" or python_version >= \"3.3\" and sys_platform == \"darwin\" or python_version >= \"3.4\" and sys_platform == \"darwin\""
 name = "appnope"
 optional = false
 python-versions = "*"
@@ -79,6 +81,7 @@ version = "1.10"
 [[package]]
 category = "main"
 description = "Timeout context manager for asyncio programs"
+marker = "python_version >= \"3.6\""
 name = "async-timeout"
 optional = false
 python-versions = ">=3.5.3"
@@ -206,6 +209,7 @@ version = "7.1.2"
 [[package]]
 category = "main"
 description = "Cross-platform colored terminal text."
+marker = "python_version >= \"3.3\" and sys_platform == \"win32\" or sys_platform == \"win32\" or python_version >= \"3.4\" and sys_platform == \"win32\""
 name = "colorama"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
@@ -217,7 +221,7 @@ description = "Supercharging Machine Learning"
 name = "comet-ml"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-version = "3.2.2"
+version = "3.2.4"
 
 [package.dependencies]
 jsonschema = ">=2.6.0,<3.1.0 || >3.1.0"
@@ -228,8 +232,15 @@ six = "*"
 websocket-client = ">=0.55.0"
 wrapt = ">=1.11.2"
 wurlitzer = ">=1.0.2"
-dulwich = {version = ">=0.20.6", markers = "python_version >= \"3.0\""}
-everett = {version = ">=1.0.1", extras = ["ini"], markers = "python_version >= \"3.0\""}
+
+[package.dependencies.dulwich]
+python = ">=3.0"
+version = ">=0.20.6"
+
+[package.dependencies.everett]
+extras = ["ini"]
+python = ">=3.0"
+version = ">=1.0.1"
 
 [package.extras]
 cpu_logging = ["psutil (>=5.6.3)"]
@@ -237,6 +248,7 @@ cpu_logging = ["psutil (>=5.6.3)"]
 [[package]]
 category = "main"
 description = "Config file reading, writing and validation."
+marker = "python_version >= \"3.0\""
 name = "configobj"
 optional = false
 python-versions = "*"
@@ -304,6 +316,7 @@ graph = ["objgraph (>=1.7.2)"]
 [[package]]
 category = "main"
 description = "Python Git Library"
+marker = "python_version >= \"3.0\""
 name = "dulwich"
 optional = false
 python-versions = ">=3.5"
@@ -330,13 +343,16 @@ version = "0.3"
 [[package]]
 category = "main"
 description = "Configuration library for Python applications"
+marker = "python_version >= \"3.0\""
 name = "everett"
 optional = false
 python-versions = "*"
 version = "1.0.2"
 
 [package.dependencies]
-configobj = {version = "*", optional = true, markers = "extra == \"ini\""}
+[package.dependencies.configobj]
+optional = true
+version = "*"
 
 [package.extras]
 ini = ["configobj"]
@@ -400,9 +416,16 @@ version = "1.22.0"
 [package.dependencies]
 cachetools = ">=2.0.0,<5.0"
 pyasn1-modules = ">=0.2.1"
+setuptools = ">=40.3.0"
 six = ">=1.9.0"
-aiohttp = {version = ">=3.6.2,<4.0.0dev", markers = "python_version >= \"3.6\""}
-rsa = {version = ">=3.1.4,<5", markers = "python_version >= \"3.5\""}
+
+[package.dependencies.aiohttp]
+python = ">=3.6"
+version = ">=3.6.2,<4.0.0dev"
+
+[package.dependencies.rsa]
+python = ">=3.5"
+version = ">=3.1.4,<5"
 
 [[package]]
 category = "main"
@@ -462,7 +485,11 @@ python-versions = ">=2.7"
 version = "0.13.3"
 
 [package.dependencies]
-ipython = {version = ">=5.1.0", markers = "python_version >= \"3.4\""}
+setuptools = "*"
+
+[package.dependencies.ipython]
+python = ">=3.4"
+version = ">=5.1.0"
 
 [[package]]
 category = "main"
@@ -473,11 +500,11 @@ python-versions = ">=3.5"
 version = "5.3.4"
 
 [package.dependencies]
+appnope = "*"
 ipython = ">=5.0.0"
 jupyter-client = "*"
 tornado = ">=4.2"
 traitlets = ">=4.1.0"
-appnope = {version = "*", markers = "platform_system == \"Darwin\""}
 
 [package.extras]
 test = ["pytest (!=5.3.4)", "pytest-cov", "flaky", "nose"]
@@ -491,16 +518,17 @@ python-versions = ">=3.7"
 version = "7.18.1"
 
 [package.dependencies]
+appnope = "*"
 backcall = "*"
+colorama = "*"
 decorator = "*"
 jedi = ">=0.10"
+pexpect = ">4.3"
 pickleshare = "*"
 prompt-toolkit = ">=2.0.0,<3.0.0 || >3.0.0,<3.0.1 || >3.0.1,<3.1.0"
 pygments = "*"
+setuptools = ">=18.5"
 traitlets = ">=4.2"
-appnope = {version = "*", markers = "sys_platform == \"darwin\""}
-colorama = {version = "*", markers = "sys_platform == \"win32\""}
-pexpect = {version = ">4.3", markers = "sys_platform != \"win32\""}
 
 [package.extras]
 all = ["Sphinx (>=1.3)", "ipykernel", "ipyparallel", "ipywidgets", "nbconvert", "nbformat", "nose (>=0.10.1)", "notebook", "numpy (>=1.14)", "pygments", "qtconsole", "requests", "testpath"]
@@ -533,7 +561,11 @@ version = "7.5.1"
 ipykernel = ">=4.5.1"
 nbformat = ">=4.2.0"
 traitlets = ">=4.3.1"
-ipython = {version = ">=4.0.0", markers = "python_version >= \"3.3\""}
+widgetsnbextension = ">=3.5.0,<3.6.0"
+
+[package.dependencies.ipython]
+python = ">=3.3"
+version = ">=4.0.0"
 
 [package.extras]
 test = ["pytest (>=3.6.0)", "pytest-cov", "mock"]
@@ -624,6 +656,7 @@ version = "3.2.0"
 [package.dependencies]
 attrs = ">=17.4.0"
 pyrsistent = ">=0.14.0"
+setuptools = "*"
 six = ">=1.11.0"
 
 [package.extras]
@@ -657,8 +690,8 @@ python-versions = "!=3.0,!=3.1,!=3.2,!=3.3,!=3.4,>=2.7"
 version = "4.6.3"
 
 [package.dependencies]
+pywin32 = ">=1.0"
 traitlets = "*"
-pywin32 = {version = ">=1.0", markers = "sys_platform == \"win32\""}
 
 [[package]]
 category = "main"
@@ -737,6 +770,7 @@ version = "0.8.4"
 [[package]]
 category = "main"
 description = "multidict implementation"
+marker = "python_version >= \"3.6\""
 name = "multidict"
 optional = false
 python-versions = ">=3.5"
@@ -996,6 +1030,7 @@ version = "5.5.0"
 [[package]]
 category = "main"
 description = "Pexpect allows easy control of interactive console applications."
+marker = "python_version >= \"3.3\" and sys_platform != \"win32\" or sys_platform != \"win32\" or python_version >= \"3.4\" and sys_platform != \"win32\""
 name = "pexpect"
 optional = false
 python-versions = "*"
@@ -1054,11 +1089,13 @@ python-versions = "*"
 version = "3.13.0"
 
 [package.dependencies]
+setuptools = "*"
 six = ">=1.9"
 
 [[package]]
 category = "main"
 description = "Run a subprocess in a pseudo terminal"
+marker = "sys_platform != \"win32\" or os_name != \"nt\" or python_version >= \"3.3\" and sys_platform != \"win32\" or python_version >= \"3.4\" and sys_platform != \"win32\""
 name = "ptyprocess"
 optional = false
 python-versions = "*"
@@ -1196,9 +1233,14 @@ python-versions = ">=3.7"
 version = "0.8.2"
 
 [package.dependencies]
+antlr4-python3-runtime = ">=4.8,<5.0"
 certifi = "*"
 jsonasobj = ">=1.2.1"
+pyjsg = ">=0.10,<1.0"
+rdflib = ">=5.0,<6.0"
+rdflib-jsonld = ">=0.5,<1.0"
 requests = ">=2.21"
+shexjsg = ">=0.7,<1.0"
 
 [[package]]
 category = "main"
@@ -1273,6 +1315,7 @@ version = "2020.1"
 [[package]]
 category = "main"
 description = "Python for Window Extensions"
+marker = "sys_platform == \"win32\""
 name = "pywin32"
 optional = false
 python-versions = "*"
@@ -1281,6 +1324,7 @@ version = "228"
 [[package]]
 category = "main"
 description = "Python bindings for the winpty library"
+marker = "os_name == \"nt\""
 name = "pywinpty"
 optional = false
 python-versions = "*"
@@ -1368,6 +1412,7 @@ rsa = ["oauthlib (>=3.0.0)"]
 [[package]]
 category = "main"
 description = "Pure-Python RSA implementation"
+marker = "python_version >= \"3.5\""
 name = "rsa"
 optional = false
 python-versions = ">=3.5, <4"
@@ -1430,6 +1475,9 @@ optional = false
 python-versions = "*"
 version = "0.7.0"
 
+[package.dependencies]
+pyjsg = ">=0.10,<1.0"
+
 [[package]]
 category = "main"
 description = "Simple, fast, extensible JSON encoder/decoder for Python"
@@ -1490,10 +1538,14 @@ markdown = ">=2.6.8"
 numpy = ">=1.12.0"
 protobuf = ">=3.6.0"
 requests = ">=2.21.0,<3"
+setuptools = ">=41.0.0"
 six = ">=1.10.0"
 tensorboard-plugin-wit = ">=1.6.0"
 werkzeug = ">=0.11.15"
-wheel = {version = ">=0.26", markers = "python_version >= \"3\""}
+
+[package.dependencies.wheel]
+python = ">=3"
+version = ">=0.26"
 
 [[package]]
 category = "main"
@@ -1512,9 +1564,9 @@ python-versions = ">=3.6"
 version = "0.9.1"
 
 [package.dependencies]
+ptyprocess = "*"
+pywinpty = ">=0.5"
 tornado = ">=4"
-ptyprocess = {version = "*", markers = "os_name != \"nt\""}
-pywinpty = {version = ">=0.5", markers = "os_name == \"nt\""}
 
 [[package]]
 category = "main"
@@ -1704,6 +1756,7 @@ watchdog = ["watchdog"]
 [[package]]
 category = "main"
 description = "A built-package format for Python"
+marker = "python_version >= \"3\""
 name = "wheel"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
@@ -1711,6 +1764,17 @@ version = "0.35.1"
 
 [package.extras]
 test = ["pytest (>=3.0.0)", "pytest-cov"]
+
+[[package]]
+category = "main"
+description = "IPython HTML widgets for Jupyter"
+name = "widgetsnbextension"
+optional = false
+python-versions = "*"
+version = "3.5.1"
+
+[package.dependencies]
+notebook = ">=4.4.1"
 
 [[package]]
 category = "main"
@@ -1770,6 +1834,7 @@ version = "2.0.0"
 [[package]]
 category = "main"
 description = "Yet another URL library"
+marker = "python_version >= \"3.6\""
 name = "yarl"
 optional = false
 python-versions = ">=3.5"
@@ -1781,7 +1846,6 @@ multidict = ">=4.0"
 
 [metadata]
 content-hash = "b213617c86d59c5b09ae7a10ceca47056dacf7e5210caabf6b9f3c4b7c398dbf"
-lock-version = "1.1"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -1921,8 +1985,8 @@ colorama = [
     {file = "colorama-0.4.3.tar.gz", hash = "sha256:e96da0d330793e2cb9485e9ddfd918d456036c7149416295932478192f4436a1"},
 ]
 comet-ml = [
-    {file = "comet_ml-3.2.2-py2.py3-none-any.whl", hash = "sha256:aae9c404420a3cc9efcd436c522ba8cb0d042dfb7b4ae562e2258585afa733df"},
-    {file = "comet_ml-3.2.2.tar.gz", hash = "sha256:4b508bf6d3db0239a49d1be088cc1ecd81386a2737a627d79ea9d553d9c1e372"},
+    {file = "comet_ml-3.2.4-py2.py3-none-any.whl", hash = "sha256:c7dba652818b1ae19cffe8c5e8329de5a7dc8d8ffb92e461909cce1d403ee743"},
+    {file = "comet_ml-3.2.4.tar.gz", hash = "sha256:804f08bb9de7319818c206a7eb231fe6aadc23c5aaacffbd4f0f9d5afecfa045"},
 ]
 configobj = [
     {file = "configobj-5.0.6.tar.gz", hash = "sha256:a2f5650770e1c87fb335af19a9b7eb73fc05ccf22144eb68db7d00cd2bcb0902"},
@@ -2139,11 +2203,6 @@ markupsafe = [
     {file = "MarkupSafe-1.1.1-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:ba59edeaa2fc6114428f1637ffff42da1e311e29382d81b339c1817d37ec93c6"},
     {file = "MarkupSafe-1.1.1-cp37-cp37m-win32.whl", hash = "sha256:b00c1de48212e4cc9603895652c5c410df699856a2853135b3967591e4beebc2"},
     {file = "MarkupSafe-1.1.1-cp37-cp37m-win_amd64.whl", hash = "sha256:9bf40443012702a1d2070043cb6291650a0841ece432556f784f004937f0f32c"},
-    {file = "MarkupSafe-1.1.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:6788b695d50a51edb699cb55e35487e430fa21f1ed838122d722e0ff0ac5ba15"},
-    {file = "MarkupSafe-1.1.1-cp38-cp38-manylinux1_i686.whl", hash = "sha256:cdb132fc825c38e1aeec2c8aa9338310d29d337bebbd7baa06889d09a60a1fa2"},
-    {file = "MarkupSafe-1.1.1-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:13d3144e1e340870b25e7b10b98d779608c02016d5184cfb9927a9f10c689f42"},
-    {file = "MarkupSafe-1.1.1-cp38-cp38-win32.whl", hash = "sha256:596510de112c685489095da617b5bcbbac7dd6384aeebeda4df6025d0256a81b"},
-    {file = "MarkupSafe-1.1.1-cp38-cp38-win_amd64.whl", hash = "sha256:e8313f01ba26fbbe36c7be1966a7b7424942f670f38e666995b88d012765b9be"},
     {file = "MarkupSafe-1.1.1.tar.gz", hash = "sha256:29872e92839765e546828bb7754a68c418d927cd064fd4708fab9fe9c8bb116b"},
 ]
 mistune = [
@@ -2792,6 +2851,10 @@ werkzeug = [
 wheel = [
     {file = "wheel-0.35.1-py2.py3-none-any.whl", hash = "sha256:497add53525d16c173c2c1c733b8f655510e909ea78cc0e29d374243544b77a2"},
     {file = "wheel-0.35.1.tar.gz", hash = "sha256:99a22d87add3f634ff917310a3d87e499f19e663413a52eb9232c447aa646c9f"},
+]
+widgetsnbextension = [
+    {file = "widgetsnbextension-3.5.1-py2.py3-none-any.whl", hash = "sha256:bd314f8ceb488571a5ffea6cc5b9fc6cba0adaf88a9d2386b93a489751938bcd"},
+    {file = "widgetsnbextension-3.5.1.tar.gz", hash = "sha256:079f87d87270bce047512400efd70238820751a11d2d8cb137a5a5bdbaf255c7"},
 ]
 wikidataintegrator = [
     {file = "wikidataintegrator-0.7.4.tar.gz", hash = "sha256:1b5fb51fa7cfeecb61f0797fd034ef5fc458d2c39e1371ac5709cf5656503ece"},
