@@ -1,15 +1,22 @@
-from typing import List, Tuple, Dict, Iterable, Any
-import torch
-from torch import nn, Tensor
+from typing import Tuple, Any
+from torch import Tensor
 import torch.nn.functional as F
+from torch.nn import LSTM, ReLU
 
-from utils import extract_kv_by_prefix
+from torch.optim import Optimizer
+from torch.optim.lr_scheduler import _LRScheduler
+import pytorch_lightning as pl
 
-class DebiasLoss(nn.Module):
-    def __init__(self, model: nn.Module, config: Any):
-        super(DebiasLoss, self).__init__()
-        self.model = model
-        self.config = config
+from allennlp_models import CoreferenceResolver
+from allennlp.data import Vocabulary
+from allennlp.modules import FeedForward
+from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
+
+
+class DebiasModule(pl.LightningModule):
+    def __init__(self, model: nn.Module, optimizers: Tuple[Optimizer, _LRScheduler]):
+        super().__init__() self.model = model
+        self.optimizers = optimizers
 
     def forward(self,
                 mask_indeces: Tensor,
@@ -54,3 +61,48 @@ class DebiasLoss(nn.Module):
         p_tgt = biased_mask_log_probs.gather(index=target_ids, dim=2)
         p_prior = base_mask_log_probs.gather(index=target_ids, dim=2)
         return p_tgt - p_prior
+
+    def training_step(self, batch, batch_idx):
+        loss = self.forward(**batch)
+        return {'loss': loss }
+
+    def configure_optimizers(self):
+        optimizer, scheduler = self.optimizers
+        return [optimizer], [scheduler]
+
+
+class CorefModule(pl.LightningModule):
+    def __init__(self, model):
+        super().__init__()
+
+        # Hyperparameters is referred to the original paper and BERT analysis paper.
+        # https://www.aclweb.org/anthology/D17-1018.pdf
+        # https://arxiv.org/pdf/1908.09091.pdf
+        vocab = Vocaburary()
+        feature_size = 20
+        context_layer = PytorchSeq2SeqWrapper(LSTM(nput_size=embedding_dim),
+                                              hidden_size=200,
+                                              num_layers=1,
+                                              dropout=0.3,
+                                              bidirectional=True,
+                                              batch_first=True)
+        mention_feedforward = FeedForward(input_dim=embedding_dim + 2 * context_layer.get_output_dim() + feature_size,
+                                          num_layers=2,
+                                          hidden_dims=[150, 150],
+                                          activations=[ReLU(), ReLU()],
+                                          dropout=[0.3, 0.3])
+        antecedent_feedforward = FeedForward(input_dim=mention_feedforward.get_input_dim() * 3 + feature_size,
+                                             num_layers=2,
+                                             hidden_dims=[150, 150],
+                                             activations=[ReLU(), ReLU()],
+                                             dropout=[0.3, 0.3])
+
+        self.resolver = CoreferenceResolver(vocab=vocab,
+                                            text_field=text_field,
+                                            context_layer=context_layer,
+                                            mention_feedforward=mention_feedforward,
+                                            antecedent_feedforward=antecedent_feedforward,
+                                            feature_size=feature_size,
+                                            max_span_width=10,
+                                            spans_per_word=0.4,
+                                            max_antecedent=250)

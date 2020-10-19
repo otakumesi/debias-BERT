@@ -7,12 +7,12 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-datasets = "^1.0.2"
+datasets = "^1.1.2"
 transformers = "^3.3.1"
 comet_ml = "^3.2.2"
 python-dotenv = "^0.14.0"
 inflect = "^4.1.0"
-tqdm = "^4.50.0"
+tqdm = "4.49.0"
 tensorboard = "^2.3.0"
 torch = "^1.6.0"
 pandas = "^1.1.2"
@@ -22,6 +22,10 @@ xlrd = "^1.2.0"
 nltk = "^3.5"
 wikidataintegrator = "^0.7.4"
 pyjsg = "^0.10.0"
+pytorch-lightning = "^1.0.1"
+allennlp = {git = "https://github.com/allenai/allennlp.git"}
+gensim = "^3.8.3"
+requests = "^2.24.0"
 
 [tool.poetry.dev-dependencies]
 python-language-server = "^0.35.1"
