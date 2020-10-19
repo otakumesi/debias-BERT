@@ -23,9 +23,7 @@ nltk = "^3.5"
 wikidataintegrator = "^0.7.4"
 pyjsg = "^0.10.0"
 pytorch-lightning = "^1.0.1"
-allennlp = {git = "https://github.com/allenai/allennlp.git"}
-gensim = "^3.8.3"
-requests = "^2.24.0"
+allennlp = {git = "https://github.com/allenai/allennlp.git", rev = "master"}
 
 [tool.poetry.dev-dependencies]
 python-language-server = "^0.35.1"
