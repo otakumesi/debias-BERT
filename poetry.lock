@@ -61,6 +61,22 @@ reference = "master"
 resolved_reference = "0e64b4d3281808fac0fe00cc5b56e5378dbb7615"
 
 [[package]]
+name = "allennlp-models"
+version = "1.2.0rc1.dev20201007"
+description = "Officially supported models for the AllenNLP framework"
+category = "main"
+optional = false
+python-versions = ">=3.6.1"
+
+[package.dependencies]
+allennlp = "1.2.0rc1"
+conllu = "4.2"
+ftfy = "*"
+nltk = "*"
+py-rouge = "1.1"
+word2number = ">=1.1"
+
+[[package]]
 name = "antlr4-python3-runtime"
 version = "4.8"
 description = "ANTLR 4.8 runtime for Python 3.7"
@@ -332,6 +348,14 @@ python-versions = "*"
 six = "*"
 
 [[package]]
+name = "conllu"
+version = "4.2"
+description = "CoNLL-U Parser parses a CoNLL-U formatted string into a nested python dictionary"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "cymem"
 version = "2.0.3"
 description = "Manage calls to calloc/free through Cython"
@@ -499,6 +523,17 @@ s3 = ["s3fs"]
 sftp = ["paramiko"]
 smb = ["smbprotocol"]
 ssh = ["paramiko"]
+
+[[package]]
+name = "ftfy"
+version = "5.8"
+description = "Fixes some problems with Unicode text after the fact"
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[package.dependencies]
+wcwidth = "*"
 
 [[package]]
 name = "future"
@@ -1305,6 +1340,14 @@ description = "library with cross-python path, ini-parsing, io, code, log facili
 category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+
+[[package]]
+name = "py-rouge"
+version = "1.1"
+description = "Full Python implementation of the ROUGE metric, producing same results as in the official perl implementation."
+category = "main"
+optional = false
+python-versions = "*"
 
 [[package]]
 name = "pyarrow"
@@ -2181,6 +2224,14 @@ sparql_slurper = "*"
 tqdm = "*"
 
 [[package]]
+name = "word2number"
+version = "1.1"
+description = "Convert number words eg. three hundred and forty two to numbers (342)."
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "wrapt"
 version = "1.12.1"
 description = "Module for decorators, wrappers and monkey patching."
@@ -2239,7 +2290,7 @@ testing = ["pytest (>=3.5,<3.7.3 || >3.7.3)", "pytest-checkdocs (>=1.2.3)", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "ed12f1b35e9ad4a5119fb0027c5123b592c2376ae188bf4b67900516cd895c21"
+content-hash = "d1fef7b0e570caab52246471af8ea0e6d6aaf588a433a0d2d5aea09563ff32c2"
 
 [metadata.files]
 absl-py = [
@@ -2261,6 +2312,10 @@ aiohttp = [
     {file = "aiohttp-3.6.2.tar.gz", hash = "sha256:259ab809ff0727d0e834ac5e8a283dc5e3e0ecc30c4d80b3cd17a4139ce1f326"},
 ]
 allennlp = []
+allennlp-models = [
+    {file = "allennlp_models-1.2.0rc1.dev20201007-py3-none-any.whl", hash = "sha256:38e781502354d2052ade639f7423ed564bcdf12e11582065dcfeefa0ce9ad50d"},
+    {file = "allennlp_models-1.2.0rc1.dev20201007.tar.gz", hash = "sha256:62cbba469346f59ebef01a8987182bc47b7ce559889ac6ab589bade27cb0a12b"},
+]
 antlr4-python3-runtime = [
     {file = "antlr4-python3-runtime-4.8.tar.gz", hash = "sha256:15793f5d0512a372b4e7d2284058ad32ce7dd27126b105fb0b2245130445db33"},
 ]
@@ -2419,6 +2474,10 @@ comet-ml = [
 configobj = [
     {file = "configobj-5.0.6.tar.gz", hash = "sha256:a2f5650770e1c87fb335af19a9b7eb73fc05ccf22144eb68db7d00cd2bcb0902"},
 ]
+conllu = [
+    {file = "conllu-4.2-py2.py3-none-any.whl", hash = "sha256:4e87ac3e71c603a857a6796a0f13311e715ebe6c70ab2cb76b88d02d2a7764ba"},
+    {file = "conllu-4.2.tar.gz", hash = "sha256:50ea93d896cdd7853a9de3e7989ffa8e44048a53a5d127d329cc1830968848bf"},
+]
 cymem = [
     {file = "cymem-2.0.3-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:f4f19af4bca81f11922508a9dcf30ce1d2aee4972af9f81ce8e5331a6f46f5e1"},
     {file = "cymem-2.0.3-cp35-cp35m-win_amd64.whl", hash = "sha256:cd21ec48ee70878d46c486e2f7ae94b32bfc6b37c4d27876c5a5a00c4eb75c3c"},
@@ -2486,6 +2545,9 @@ flask-cors = [
 fsspec = [
     {file = "fsspec-0.8.4-py3-none-any.whl", hash = "sha256:404194b0cf93128d980689fe9a49013ee9676edd1ab7f0f15b737b2cedb0ab88"},
     {file = "fsspec-0.8.4.tar.gz", hash = "sha256:e1e494d4814f6804769f3c7bfd7a722a15113cc0339d14755297f09306b8f21f"},
+]
+ftfy = [
+    {file = "ftfy-5.8.tar.gz", hash = "sha256:51c7767f8c4b47d291fcef30b9625fb5341c06a31e6a3b627039c706c42f3720"},
 ]
 future = [
     {file = "future-0.18.2.tar.gz", hash = "sha256:b1bead90b70cf6ec3f0710ae53a525360fa360d306a86583adc6bf83a4db537d"},
@@ -2952,6 +3014,10 @@ ptyprocess = [
 py = [
     {file = "py-1.9.0-py2.py3-none-any.whl", hash = "sha256:366389d1db726cd2fcfc79732e75410e5fe4d31db13692115529d34069a043c2"},
     {file = "py-1.9.0.tar.gz", hash = "sha256:9ca6883ce56b4e8da7e79ac18787889fa5206c79dcc67fb065376cd2fe03f342"},
+]
+py-rouge = [
+    {file = "py-rouge-1.1.tar.gz", hash = "sha256:b6caf2f031c45f699a9481c8962b8c33688165a3f2a22e1bfbaede8e073d6bb0"},
+    {file = "py_rouge-1.1-py3-none-any.whl", hash = "sha256:9ae2a859a9edc6d25f3908e48706f7d82d6e78ea18954560c4cb21897dc1d270"},
 ]
 pyarrow = [
     {file = "pyarrow-1.0.1-cp35-cp35m-macosx_10_9_intel.whl", hash = "sha256:d58ef5bbf548ffa0ec61d37bb95b1ebdf4209e5c8579b53213cf1d9bd804bfe9"},
@@ -3520,6 +3586,9 @@ widgetsnbextension = [
 ]
 wikidataintegrator = [
     {file = "wikidataintegrator-0.7.4.tar.gz", hash = "sha256:1b5fb51fa7cfeecb61f0797fd034ef5fc458d2c39e1371ac5709cf5656503ece"},
+]
+word2number = [
+    {file = "word2number-1.1.zip", hash = "sha256:70e27a5d387f67b04c71fbb7621c05930b19bfd26efd6851e6e0f9969dcde7d0"},
 ]
 wrapt = [
     {file = "wrapt-1.12.1.tar.gz", hash = "sha256:b62ffa81fb85f4332a4f609cab4ac40709470da05643a082ec1eb88e6d9b97d7"},
