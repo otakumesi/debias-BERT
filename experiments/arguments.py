@@ -8,15 +8,22 @@ import torch
 class ModelArguments:
     model_name_or_path: str = field(
         default='bert-base-uncased',
-        metadata={'help': 'Path to pretrained model or model identifier from huggingface.co/models'}
+        metadata={
+            'help': 'Path to pretrained model or model identifier from huggingface.co/models'}
+    )
+    override_weights_file: str = field(
+        default=None,
+        metadata={'help': 'Path to weights file of trained models'}
     )
     config_name: Optional[str] = field(
         default=None,
-        metadata={'help': 'Pretrained config name or path if not the same as model_name'}
+        metadata={
+            'help': 'Pretrained config name or path if not the same as model_name'}
     )
     tokenizer_name: Optional[str] = field(
         default=None,
-        metadata={'help': 'Pretrained tokenizer name or path if not the same as model_name'}
+        metadata={
+            'help': 'Pretrained tokenizer name or path if not the same as model_name'}
     )
     cache_dir: Optional[str] = field(
         default=None,
@@ -30,7 +37,39 @@ class DataArguments:
         default=None,
         metadata={'help': 'Path to dataset'}
     )
-    dataset_length: Optional[int]= field(
+    dataset_length: Optional[int] = field(
         default=None,
-        metadata={'help': 'Number to use data on your task.'}
+        metadata={'help': 'Number to use data on your task'}
+    )
+
+
+@dataclass
+class TrainingArguments:
+    seed: int = field(
+        default=42,
+        metadata={'help': 'Initialized random seed number'}
+    )
+    train_batch_size: int = field(
+        default=32,
+        metadata={'help': 'Batch Size for training'}
+    )
+    test_batch_size: int = field(
+        default=32,
+        metadata={'help': 'Batch Size for test'}
+    )
+    num_epochs: int = field(
+        default=20,
+        metadata={'help': 'Epoch Number for traing'}
+    )
+    learning_rate: float = field(
+        default=10-5,
+        metadata={'help': 'Learning Rate'}
+    )
+
+
+@dataclass
+class WinobiasDataArguments:
+    task_type_number: int = field(
+        default=1,
+        metadata={'help': 'The number of task type in WinoBias'}
     )
