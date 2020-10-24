@@ -94,12 +94,16 @@ def run():
 
         trainer.train()
 
-        if not OUTPUT_PATH.exists():
-            OUTPUT_PATH.mkdir(parents=True)
-        evaluate(model=model,
-                 data_loader=test_loader,
-                 output_file=OUTPUT_PATH / f'{ds_attr}_stereotype_result.txt',
-                 cuda_device=1 if torch.cuda.is_available() else -1)
+        try:
+            OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
+            output_file = OUTPUT_PATH / f'{ds_attr}_stereotype_result.txt'
+            evaluate(model=model,
+                     data_loader=test_loader,
+                     output_file=output_file,
+                     cuda_device=1 if torch.cuda.is_available() else -1)
+        except BaseException as e:
+            OUTPUT_PATH.rmdir()
+            raise e
 
 
 if __name__ == "__main__":
