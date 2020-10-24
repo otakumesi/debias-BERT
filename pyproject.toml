@@ -25,6 +25,7 @@ pyjsg = "^0.10.0"
 pytorch-lightning = "^1.0.1"
 allennlp = {git = "https://github.com/allenai/allennlp.git", rev = "master"}
 allennlp-models = "1.2.0rc1"
+overrides = "^3.1.0"
 
 [tool.poetry.dev-dependencies]
 python-language-server = "^0.35.1"
