@@ -90,7 +90,7 @@ class BiasLogProbabilityDebiaser(Module):
         return (F.mse_loss(first_increased_log_probs, second_increased_log_probs),)
 
 
-class MLP(Module):
+class MLPHead(Module):
     def __init__(self, n_input: int, n_classes: int, dropout=0.2, n_hidden=512):
         super().__init__()
 
@@ -102,12 +102,17 @@ class MLP(Module):
             Linear(n_hidden, n_classes)
         )
 
-    def forward(self, sequence_embeddings):
-        return self.classifier(sequence_embeddings)
+    def forward(self, spans):
+        return self.classifier(spans)
 
 
 class MyCorefResolver(Module):
-    def __init__(self, model: Module, n_classes: int = 3, n_hidden: int = 512):
+    # The code is inspired The Model inspired Tenney et al. (2019)
+    # https://openreview.net/forum?id=SJzSgnRcKX
+    # https://www.kaggle.com/mateiionita/taming-the-bert-a-baseline
+    # https://www.kaggle.com/ceshine/pytorch-bert-baseline-public-score-0-54
+
+    def __init__(self, model: Module, n_classes: int = 3, n_hidden: int = 1024):
         super().__init__()
 
         self.model = model
@@ -116,15 +121,19 @@ class MyCorefResolver(Module):
         self.span_extractor_2 = SelfAttentiveSpanExtractor(
             input_dim=model.get_output_embeddings())
 
-        self.projection_1 = Linear(model.get_output_embeddings(), 1)
-        self.projection_2 = Linear(model.get_output_embeddings(), 1)
+        d_span_1 = self.span_extractor_1.get_output_dim()
+        d_span_2 = self.span_extractor_2.get_output_dim()
+        self.head = MLPHead(d_span_1 + d_span_2, n_classes)
 
-        n_input = (self.span_extractor_1.get_output_dim() +
-                   self.span_extractor_2.get_output_dim())
-        self.classifier = MLP(n_input, n_classes)
+    def forward(self, input_ids: Tensor, attention_mask: Tensor, token_type_ids: Tensor, offsets: Tensor):
+        model_outputs, _ = self.model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+        spans_1 = self.span_extractor_1(model_outputs)
+        spans_2 = self.span_extractor_2(model_outputs)
 
-    def forward(self):
-        pass
+        concatted_spans = torch.cat((spans_1, spans_2), -1)
+        head_outputs = self.head(concatted_spans)
+
+        return head_outputs
 
 
 class AllenNLPCorefResolver(Model):
