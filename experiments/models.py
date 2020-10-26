@@ -1,13 +1,14 @@
-from typing import List, Tuple, Dict, Any
+from typing import List, Dict, Any
 
 import torch
 from torch import Tensor, IntTensor
 import torch.nn.functional as F
-from torch.nn import LSTM, ReLU, Module
+from torch.nn import Module, Sequential, LSTM, ReLU, Linear, Dropout, Tanh, LayerNorm
 from overrides import overrides
 
 from allennlp_models.coref.models.coref import CoreferenceResolver
 from allennlp.models.model import Model
+from allennlp.models.span_extractors import SelfAttentiveSpanExtractor
 from allennlp.data import Vocabulary, TextFieldTensors
 from allennlp.modules import FeedForward
 from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
@@ -46,7 +47,9 @@ class AttentionDebiaser(Module):
             swapped_outputs.attentions).permute(1, 0, 2, 3, 4)
 
         # Jensen–Shannon divergence
-        return torch.sum(1/2 * F.kl_div(orig_attns, swapped_attns, reduction='none') + 1/2 * F.kl_div(swapped_attns, orig_attns, reduction='none'))
+        js_divs = 1/2 * F.kl_div(orig_attns, swapped_attns, reduction='none') + \
+            1/2 * F.kl_div(swapped_attns, orig_attns, reduction='none')
+        return torch.sum(js_divs)
 
 
 class BiasLogProbabilityDebiaser(Module):
@@ -87,7 +90,44 @@ class BiasLogProbabilityDebiaser(Module):
         return (F.mse_loss(first_increased_log_probs, second_increased_log_probs),)
 
 
-class MyCorefResolver(Model):
+class MLP(Module):
+    def __init__(self, n_input: int, n_classes: int, dropout=0.2, n_hidden=512):
+        super().__init__()
+
+        self.classifier = Sequential(
+            Linear(n_input, n_hidden),
+            Tanh(),
+            LayerNorm(),
+            Dropout(dropout),
+            Linear(n_hidden, n_classes)
+        )
+
+    def forward(self, sequence_embeddings):
+        return self.classifier(sequence_embeddings)
+
+
+class MyCorefResolver(Module):
+    def __init__(self, model: Module, n_classes: int = 3, n_hidden: int = 512):
+        super().__init__()
+
+        self.model = model
+        self.span_extractor_1 = SelfAttentiveSpanExtractor(
+            input_dim=model.get_output_embeddings())
+        self.span_extractor_2 = SelfAttentiveSpanExtractor(
+            input_dim=model.get_output_embeddings())
+
+        self.projection_1 = Linear(model.get_output_embeddings(), 1)
+        self.projection_2 = Linear(model.get_output_embeddings(), 1)
+
+        n_input = (self.span_extractor_1.get_output_dim() +
+                   self.span_extractor_2.get_output_dim())
+        self.classifier = MLP(n_input, n_classes)
+
+    def forward(self):
+        pass
+
+
+class AllenNLPCorefResolver(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  model_name: str = None,
