@@ -8,7 +8,7 @@ from overrides import overrides
 
 from allennlp_models.coref.models.coref import CoreferenceResolver
 from allennlp.models.model import Model
-from allennlp.models.span_extractors import SelfAttentiveSpanExtractor
+from allennlp.modules.span_extractors import SelfAttentiveSpanExtractor
 from allennlp.data import Vocabulary, TextFieldTensors
 from allennlp.modules import FeedForward
 from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
@@ -125,10 +125,17 @@ class MyCorefResolver(Module):
         d_span_2 = self.span_extractor_2.get_output_dim()
         self.head = MLPHead(d_span_1 + d_span_2, n_classes)
 
-    def forward(self, input_ids: Tensor, attention_mask: Tensor, token_type_ids: Tensor, offsets: Tensor):
-        model_outputs, _ = self.model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
-        spans_1 = self.span_extractor_1(model_outputs)
-        spans_2 = self.span_extractor_2(model_outputs)
+    def forward(self,
+                input_ids: Tensor,
+                attention_mask: Tensor,
+                token_type_ids: Tensor,
+                a_span_indeces: Tensor,
+                b_span_indeces: Tensor
+                ):
+        model_outputs, _ = self.model(
+            input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+        spans_1 = self.span_extractor_1(model_outputs, a_span_indeces)
+        spans_2 = self.span_extractor_2(model_outputs, b_span_indeces)
 
         concatted_spans = torch.cat((spans_1, spans_2), -1)
         head_outputs = self.head(concatted_spans)
