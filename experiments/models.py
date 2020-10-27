@@ -1,9 +1,9 @@
 from typing import List, Dict, Any
 
 import torch
-from torch import Tensor, IntTensor
+from torch import Tensor, IntTensor, LongTensor
 import torch.nn.functional as F
-from torch.nn import Module, Sequential, LSTM, ReLU, Linear, Dropout, Tanh, LayerNorm
+from torch.nn import Module, Sequential, LSTM, ReLU, Linear, Dropout, Tanh, BatchNorm1d, Softmax
 from overrides import overrides
 
 from allennlp_models.coref.models.coref import CoreferenceResolver
@@ -96,8 +96,8 @@ class MLPHead(Module):
 
         self.classifier = Sequential(
             Linear(n_input, n_hidden),
-            Tanh(),
-            LayerNorm(),
+            BatchNorm1d(n_hidden),
+            ReLU(),
             Dropout(dropout),
             Linear(n_hidden, n_classes)
         )
@@ -117,9 +117,9 @@ class MyCorefResolver(Module):
 
         self.model = model
         self.span_extractor_1 = SelfAttentiveSpanExtractor(
-            input_dim=model.get_output_embeddings())
+            input_dim=model.config.hidden_size)
         self.span_extractor_2 = SelfAttentiveSpanExtractor(
-            input_dim=model.get_output_embeddings())
+            input_dim=model.config.hidden_size)
 
         d_span_1 = self.span_extractor_1.get_output_dim()
         d_span_2 = self.span_extractor_2.get_output_dim()
@@ -129,14 +129,16 @@ class MyCorefResolver(Module):
                 input_ids: Tensor,
                 attention_mask: Tensor,
                 token_type_ids: Tensor,
-                a_span_indeces: Tensor,
-                b_span_indeces: Tensor
+                a_span_indeces: LongTensor,
+                b_span_indeces: LongTensor
                 ):
+
         model_outputs, _ = self.model(
             input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
         spans_1 = self.span_extractor_1(model_outputs, a_span_indeces)
         spans_2 = self.span_extractor_2(model_outputs, b_span_indeces)
 
+        import ipdb; ipdb.set_trace()
         concatted_spans = torch.cat((spans_1, spans_2), -1)
         head_outputs = self.head(concatted_spans)
 

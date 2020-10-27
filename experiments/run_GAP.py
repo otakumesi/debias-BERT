@@ -55,17 +55,29 @@ def run():
             model_args.model_name_or_path, cache_dir=model_args.cache_dir, use_fast=True)
 
     datasets = load_dataset('gap')
+    datasets = prepare_gap(datasets, tokenizer)
 
-    train_set = prepare_gap(datasets['train'], tokenizer)
-    valid_set = prepare_gap(datasets['validation'], tokenizer)
-    test_set = prepare_gap(datasets['test'], tokenizer)
+    train_set = datasets['train']
+    valid_set = datasets['validation']
+    test_set = datasets['test']
+
+    columns = ['input_ids', 'attention_mask', 'token_type_ids', 'a_span_indeces', 'b_span_indeces', 'labels']
+    train_set.set_format(type='torch', columns=columns)
+    valid_set.set_format(type='torch', columns=columns)
+    test_set.set_format(type='torch', columns=columns)
 
     model = AutoModel.from_pretrained(
         model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir)
     resolver = MyCorefResolver(model=model)
-    optimizer = Adam(model.parameters(), lr=train_args.learning_rate)
 
-    device = 'cuda' if torch.cuda.is_avaiable() else 'cpu'
+    # Fixed pretrained model parameters
+    for param in resolver.model.parameters():
+        param.requires_grad = False
+
+    optimizer = Adam(resolver.parameters(), lr=train_args.learning_rate)
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    resolver.to(device)
 
     runner = CorefRunner(model=resolver, device=device)
 
@@ -83,12 +95,12 @@ def run():
     #     verbose=True
     # )
 
-    test_loader = DataLoader(test_set, batch_size=1)
+    test_loader = DataLoader(test_set, batch_size=5)
     with open(OUTPUT_PATH / 'gep-system-output.tsv', 'w') as f:
         writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
         headers = ['ID', 'Pronoun', 'A-coref', 'B-coref']
         writer.writerow(headers)
-        for i, preds in enumerate(runner.predict_loader(test_loader)):
+        for i, preds in enumerate(runner.predict_loader(loader=test_loader)):
             pred_probs = F.softmax(preds, -1)
             pred_labels = pred_probs.max(dim=-1).indeces
 
@@ -96,7 +108,7 @@ def run():
                 a_coref = 'True' if pred_labels == 1 else 'False'
                 b_coref = 'True' if pred_labels == 2 else 'False'
 
-                test_row = test_set[i*train_args.test_batch_size+j]
+                test_row = datasets['test'][i*train_args.test_batch_size+j]
                 writer.writerow(
                     [test_row['ID'], test_row['Pronoun'], a_coref, b_coref])
 
