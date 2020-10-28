@@ -113,10 +113,10 @@ def run():
         distributed=True
     )
 
-    experiment.log_model('Coref with BERT', OUTPUT_PATH)
+    experiment.log_model('Coref with BERT', OUTPUT_PATH / 'checkpoints')
 
     test_loader = DataLoader(test_set, batch_size=train_args.test_batch_size)
-    with open(OUTPUT_PATH / 'gep-system-output.tsv', 'w') as f:
+    with open(OUTPUT_PATH / 'gap-system-output.tsv', 'w') as f:
         writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
         headers = ['ID', 'Pronoun', 'A-coref', 'B-coref']
         writer.writerow(headers)
