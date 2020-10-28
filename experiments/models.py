@@ -135,8 +135,8 @@ class MyCorefResolver(Module):
 
         model_outputs, _ = self.model(
             input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
-        spans_1 = self.span_extractor_1(model_outputs, a_span_indeces)
-        spans_2 = self.span_extractor_2(model_outputs, b_span_indeces)
+        spans_1 = self.span_extractor_1(model_outputs, a_span_indeces, attention_mask)
+        spans_2 = self.span_extractor_2(model_outputs, b_span_indeces, attention_mask)
 
         concatted_spans = torch.cat((spans_1, spans_2), -1).squeeze(0)
         head_outputs = self.head(concatted_spans)
