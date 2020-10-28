@@ -1,16 +1,18 @@
+from comet_ml import Experiment
+
+import os
 import csv
 import logging
 import random
 from datetime import datetime
 from pathlib import Path
-from collections import defaultdict
 
 import numpy as np
 from transformers import HfArgumentParser
 from transformers import AutoModel, AutoTokenizer, AutoConfig
 import torch
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 from dotenv import load_dotenv
 from datasets import load_dataset
@@ -23,6 +25,17 @@ from utils import prepare_gap
 ARGS_JSON_FILE = "args.json"
 TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 logging.basicConfig(level=logging.INFO)
+
+load_dotenv()
+
+API_KEY = os.getenv('COMET_API_KEY')
+WORKSPACE = os.getenv('COMET_WORKSPACE')
+PROJECT_NAME = os.getenv('COMET_PROJECT_NAME')
+
+experiment = Experiment(api_key=API_KEY,
+                        workspace=WORKSPACE,
+                        project_name=PROJECT_NAME,
+                        auto_output_logging='simple')
 
 DATASET_PATH = Path("data/winobias")
 OUTPUT_PATH = Path('runs') / TIMESTAMP
@@ -54,12 +67,15 @@ def run():
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.model_name_or_path, cache_dir=model_args.cache_dir, use_fast=True)
 
-    datasets = load_dataset('gap')
-    datasets = prepare_gap(datasets, tokenizer)
+    train_set, valid_set, test_set = load_dataset('gap', split=['train', 'validation', 'test'])
 
-    train_set = datasets['train']
-    valid_set = datasets['validation']
-    test_set = datasets['test']
+    # For Output files
+    test_set_ids = test_set['ID'].copy()
+    test_set_pronouns = test_set['Pronoun'].copy()
+
+    train_set = prepare_gap(train_set, tokenizer)
+    valid_set = prepare_gap(valid_set, tokenizer)
+    test_set = prepare_gap(test_set, tokenizer)
 
     columns = ['input_ids', 'attention_mask', 'token_type_ids', 'a_span_indeces', 'b_span_indeces', 'labels']
     train_set.set_format(type='torch', columns=columns)
@@ -85,32 +101,36 @@ def run():
 
     train_loaders = {'train': DataLoader(train_set, batch_size=train_args.train_batch_size),
                      'valid': DataLoader(valid_set, batch_size=train_args.train_batch_size)}
-    # runner.train(
-    #     criterion=CrossEntropyLoss,
-    #     optimizer=optimizer,
-    #     loaders=train_loaders,
-    #     num_epochs=train_args.num_epochs,
-    #     initial_seed=train_args.seed,
-    #     logdir=OUTPUT_PATH
-    #     verbose=True
-    # )
 
-    test_loader = DataLoader(test_set, batch_size=5)
+    runner.train(
+        model=resolver,
+        optimizer=optimizer,
+        loaders=train_loaders,
+        num_epochs=train_args.num_epochs,
+        initial_seed=train_args.seed,
+        logdir=OUTPUT_PATH,
+        verbose=True,
+        distributed=True
+    )
+
+    experiment.log_model('Coref with BERT', OUTPUT_PATH)
+
+    test_loader = DataLoader(test_set, batch_size=train_args.test_batch_size)
     with open(OUTPUT_PATH / 'gep-system-output.tsv', 'w') as f:
         writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
         headers = ['ID', 'Pronoun', 'A-coref', 'B-coref']
         writer.writerow(headers)
         for i, preds in enumerate(runner.predict_loader(loader=test_loader)):
             pred_probs = F.softmax(preds, -1)
-            pred_labels = pred_probs.max(dim=-1).indeces
+            pred_labels = pred_probs.max(dim=-1).indices
 
             for j, label in enumerate(pred_labels):
-                a_coref = 'True' if pred_labels == 1 else 'False'
-                b_coref = 'True' if pred_labels == 2 else 'False'
+                a_coref = 'True' if label == 1 else 'False'
+                b_coref = 'True' if label == 2 else 'False'
 
-                test_row = datasets['test'][i*train_args.test_batch_size+j]
+                idx = i*train_args.test_batch_size+j
                 writer.writerow(
-                    [test_row['ID'], test_row['Pronoun'], a_coref, b_coref])
+                    [test_set_ids[idx], test_set_pronouns[idx], a_coref, b_coref])
 
 
 if __name__ == "__main__":

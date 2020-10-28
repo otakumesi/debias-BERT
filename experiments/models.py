@@ -138,8 +138,7 @@ class MyCorefResolver(Module):
         spans_1 = self.span_extractor_1(model_outputs, a_span_indeces)
         spans_2 = self.span_extractor_2(model_outputs, b_span_indeces)
 
-        import ipdb; ipdb.set_trace()
-        concatted_spans = torch.cat((spans_1, spans_2), -1)
+        concatted_spans = torch.cat((spans_1, spans_2), -1).squeeze(0)
         head_outputs = self.head(concatted_spans)
 
         return head_outputs

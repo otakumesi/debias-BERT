@@ -1,6 +1,7 @@
 def extract_kv_by_prefix(target_dict, prefix):
     return {k.lstrip(prefix): v for k, v in target_dict if k.startswith(prefix)}
 
+
 def extract_spans_from_offset_maps(offset_maps, start, end):
     offsets = [
         i
@@ -16,7 +17,8 @@ def extract_spans_from_offset_maps(offset_maps, start, end):
 
     return (span_start, span_end)
 
-def prepare_gap(datasets, tokenizer, max_token_len=300):
+
+def prepare_gap(datasets, tokenizer, max_token_len=500):
     def make_label(example):
         if example["A-coref"] == 1:
             return {"labels": 1}
@@ -42,12 +44,14 @@ def prepare_gap(datasets, tokenizer, max_token_len=300):
         return {"a_span_indeces": [a_indeces, p_indeces],
                 "b_span_indeces": [b_indeces, p_indeces]}
 
-    datasets = datasets.map(make_label)
+    datasets = datasets.map(make_label, remove_columns=['A-coref', 'B-coref'])
     datasets = datasets.map(lambda example: tokenizer([t.lower() for t in example["Text"]],
-                                                    return_offsets_mapping=True,
-                                                    max_length=max_token_len,
-                                                    padding='max_length'),
-                          batched=True)
-    datasets = datasets.map(make_spans)
+                                                      return_offsets_mapping=True,
+                                                      max_length=max_token_len,
+                                                      padding='max_length'),
+                            batched=True,
+                            remove_columns=['Text'])
+    datasets = datasets.map(make_spans, remove_columns=[
+                            'Pronoun-offset', 'A-offset', 'B-offset', 'Pronoun', 'A', 'B'])
 
     return datasets
