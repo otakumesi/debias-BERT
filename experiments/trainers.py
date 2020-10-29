@@ -48,9 +48,4 @@ class CorefRunner(Runner):
 
         loss = F.cross_entropy(logits, labels.long())
 
-        self.batch_metrics = {'loss': loss }
-
-        if self.is_train_loader:
-            loss.backward()
-            self.optimizer.step()
-            self.optimizer.zero_grad()
+        self.batch_metrics = {'loss': loss}
