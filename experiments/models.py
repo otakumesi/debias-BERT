@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 import torch
 from torch import Tensor, IntTensor, LongTensor
 import torch.nn.functional as F
-from torch.nn import Module, Sequential, LSTM, ReLU, Linear, Dropout, BatchNorm1d Softmax
+from torch.nn import Module, Sequential, LSTM, ReLU, Linear, Dropout, BatchNorm1d
 from overrides import overrides
 
 from allennlp_models.coref.models.coref import CoreferenceResolver
@@ -96,7 +96,7 @@ class MLPHead(Module):
 
         self.classifier = Sequential(
             Linear(n_input, n_hidden),
-            Batch(),
+            LayerNorm(n_hidden),
             BatchNorm1d(n_hidden),
             ReLU()
             Dropout(dropout),
@@ -117,6 +117,8 @@ class MyCorefResolver(Module):
         super().__init__()
 
         self.model = model
+
+        # spanをただ単にconcatする方法もありな気がした
         self.span_extractor_1 = SelfAttentiveSpanExtractor(
             input_dim=model.config.hidden_size)
         self.span_extractor_2 = SelfAttentiveSpanExtractor(
