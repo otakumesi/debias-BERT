@@ -120,7 +120,7 @@ def run():
                                                                 'norm_type': 2})}
     )
 
-    experiment.log_model('Coref with BERT', OUTPUT_PATH / 'checkpoints')
+    # experiment.log_model('Coref with BERT', OUTPUT_PATH / 'checkpoints')
 
     test_loader = DataLoader(test_set, batch_size=train_args.test_batch_size)
     with open(OUTPUT_PATH / 'gap-system-output.tsv', 'w') as f:

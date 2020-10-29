@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 import torch
 from torch import Tensor, IntTensor, LongTensor
 import torch.nn.functional as F
-from torch.nn import Module, Sequential, LSTM, ReLU, Linear, Dropout, Tanh, LayerNorm, Softmax
+from torch.nn import Module, Sequential, LSTM, ReLU, Linear, Dropout, BatchNorm1d Softmax
 from overrides import overrides
 
 from allennlp_models.coref.models.coref import CoreferenceResolver
@@ -96,8 +96,9 @@ class MLPHead(Module):
 
         self.classifier = Sequential(
             Linear(n_input, n_hidden),
-            Tanh(),
-            LayerNorm(n_hidden),
+            Batch(),
+            BatchNorm1d(n_hidden),
+            ReLU()
             Dropout(dropout),
             Linear(n_hidden, n_classes)
         )
