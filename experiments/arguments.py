@@ -1,8 +1,6 @@
 from typing import Optional
 from dataclasses import dataclass, field
 
-import torch
-
 
 @dataclass
 class ModelArguments:
@@ -44,7 +42,7 @@ class DataArguments:
 
 
 @dataclass
-class TrainingArguments:
+class MyTrainingArguments:
     seed: int = field(
         default=42,
         metadata={'help': 'Initialized random seed number'}

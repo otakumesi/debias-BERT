@@ -1,7 +1,7 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 import torch
-from torch import Tensor, IntTensor, LongTensor
+from torch import Tensor, IntTensor, LongTensor, BoolTensor
 import torch.nn.functional as F
 from torch.nn import Module, Sequential, LSTM, ReLU, Linear, Dropout, BatchNorm1d, LayerNorm
 from overrides import overrides
@@ -117,6 +117,7 @@ class MyCorefResolver(Module):
         super().__init__()
 
         self.model = model
+        self.config = model.config
 
         # spanをただ単にconcatする方法もありな気がした
         # 例のkaggleを参考に
@@ -133,9 +134,18 @@ class MyCorefResolver(Module):
                 input_ids: Tensor,
                 attention_mask: Tensor,
                 token_type_ids: Tensor,
-                a_span_pair_indeces: LongTensor,
-                b_span_pair_indeces: LongTensor
+                p_span_indeces: LongTensor,
+                a_span_indeces: LongTensor,
+                b_span_indeces: LongTensor,
+                labels: Optional[BoolTensor]
                 ):
+
+        p_indeces = p_span_indeces.unsqueeze(1)
+        a_indeces = a_span_indeces.unsqueeze(1)
+        b_indeces = b_span_indeces.unsqueeze(1)
+
+        a_span_pair_indeces = torch.cat((a_indeces, p_indeces), dim=1)
+        b_span_pair_indeces = torch.cat((b_indeces, p_indeces), dim=1)
 
         model_outputs, _ = self.model(
             input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
@@ -144,9 +154,10 @@ class MyCorefResolver(Module):
         spans_2 = self.span_extractor_2(model_outputs, b_span_pair_indeces)
 
         concatted_spans = torch.cat((spans_1, spans_2), -1)
-        head_outputs = self.head(concatted_spans)
+        logits = self.head(concatted_spans)
+        loss = F.cross_entropy(logits, labels.long())
 
-        return head_outputs
+        return loss, logits
 
 
 class AllenNLPCorefResolver(Model):

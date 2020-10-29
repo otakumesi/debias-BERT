@@ -3,5 +3,11 @@
   "seed": 42,
   "output_dir": "runs/models",
   "learning_rate": 1e-4,
-  "dataset_length": 10
+  "max_grad_norm": 5,
+  "num_train_epochs": 20,
+  "eval_steps": 1000,
+  "save_steps": 1000,
+  "do_train": true,
+  "do_eval": true,
+  "remove_unused_columns": false
 }

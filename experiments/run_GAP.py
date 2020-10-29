@@ -8,19 +8,17 @@ from datetime import datetime
 from pathlib import Path
 
 import numpy as np
-from transformers import HfArgumentParser
+from transformers import HfArgumentParser, TrainingArguments, get_linear_schedule_with_warmup
 from transformers import AutoModel, AutoTokenizer, AutoConfig
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
 from torch.optim import Adam
 from dotenv import load_dotenv
 from datasets import load_dataset
-from catalyst import dl
+from transformers import Trainer
 
-from arguments import ModelArguments, WinobiasDataArguments, TrainingArguments
+from arguments import ModelArguments, WinobiasDataArguments
 from models import MyCorefResolver
-from trainers import CorefRunner
 from utils import prepare_gap
 
 ARGS_JSON_FILE = "args.json"
@@ -93,50 +91,33 @@ def run():
         param.requires_grad = False
 
     optimizer = Adam(resolver.parameters(), lr=train_args.learning_rate)
+    lr_scheduler = get_linear_schedule_with_warmup(optimizer, 0, train_args.train_batch_size * train_args.num_train_epochs)
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    resolver.to(device)
-
-    runner = CorefRunner(model=resolver, device=device)
-
-    OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
-
-    train_loaders = {'train': DataLoader(train_set, batch_size=train_args.train_batch_size),
-                     'valid': DataLoader(valid_set, batch_size=train_args.train_batch_size)}
-
-    runner.train(
+    trainer = Trainer(
         model=resolver,
-        optimizer=optimizer,
-        loaders=train_loaders,
-        num_epochs=train_args.num_epochs,
-        initial_seed=train_args.seed,
-        logdir=OUTPUT_PATH,
-        verbose=True,
-        # distributed=True if device == 'cuda' else False,
-        callbacks={
-            'optimizer': dl.OptimizerCallback(metric_key='loss',
-                                              grad_clip_params={'func': 'clip_grad_norm_',
-                                                                'max_norm': 5,  # the parameter from https://openreview.net/pdf?id=SJzSgnRcKX
-                                                                'norm_type': 2}),
-            'tensorboard': dl.TensorboardLogger()}
-        )
+        args=train_args,
+        tokenizer=tokenizer,
+        optimizers=(optimizer, lr_scheduler),
+        train_dataset=train_set,
+        eval_dataset=valid_set,
+    )
+
+
+    trainer.train()
 
     # experiment.log_model('Coref with BERT', OUTPUT_PATH / 'checkpoints')
 
-    test_loader = DataLoader(test_set, batch_size=train_args.test_batch_size)
-    with open(OUTPUT_PATH / 'gap-system-output.tsv', 'w') as f:
+    with open(Path(train_args.logging_dir) / 'gap-system-output.tsv', 'w') as f:
         writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
-        for i, preds in enumerate(runner.predict_loader(loader=test_loader)):
-            pred_probs = F.softmax(preds, -1)
-            pred_labels = pred_probs.max(dim=-1).indices
+        outputs = trainer.predict(test_dataset=test_set)
+        pred_probs = F.softmax(torch.from_numpy(outputs.predictions), dim=-1)
+        pred_labels = pred_probs.max(dim=-1).indices
 
-            for j, (label_1, label_2) in enumerate(pred_labels):
-                a_coref = 'True' if label_1 == 1 else 'False'
-                b_coref = 'True' if label_2 == 1 else 'False'
-
-                idx = i*train_args.test_batch_size+j
-                writer.writerow(
-                    [test_set_ids[idx], a_coref, b_coref])
+        for j, (label_1, label_2) in enumerate(pred_labels):
+            a_coref = 'True' if label_1.item() == 1 else 'False'
+            b_coref = 'True' if label_2.item() == 1 else 'False'
+            writer.writerow(
+                [test_set_ids[j], a_coref, b_coref])
 
 
 if __name__ == "__main__":
