@@ -112,13 +112,14 @@ def run():
         initial_seed=train_args.seed,
         logdir=OUTPUT_PATH,
         verbose=True,
-        distributed=True if device == 'cuda' else False,
+        # distributed=True if device == 'cuda' else False,
         callbacks={
             'optimizer': dl.OptimizerCallback(metric_key='loss',
                                               grad_clip_params={'func': 'clip_grad_norm_',
-                                                                'max_norm': 5, # the parameter from https://openreview.net/pdf?id=SJzSgnRcKX
-                                                                'norm_type': 2})}
-    )
+                                                                'max_norm': 5,  # the parameter from https://openreview.net/pdf?id=SJzSgnRcKX
+                                                                'norm_type': 2}),
+            'tensorboard': dl.TensorboardLogger()}
+        )
 
     # experiment.log_model('Coref with BERT', OUTPUT_PATH / 'checkpoints')
 

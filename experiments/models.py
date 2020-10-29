@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 import torch
 from torch import Tensor, IntTensor, LongTensor
 import torch.nn.functional as F
-from torch.nn import Module, Sequential, LSTM, ReLU, Linear, Dropout, BatchNorm1d
+from torch.nn import Module, Sequential, LSTM, ReLU, Linear, Dropout, BatchNorm1d, LayerNorm
 from overrides import overrides
 
 from allennlp_models.coref.models.coref import CoreferenceResolver
@@ -91,14 +91,14 @@ class BiasLogProbabilityDebiaser(Module):
 
 
 class MLPHead(Module):
-    def __init__(self, n_input: int, n_classes: int, dropout=0.2, n_hidden=512):
+    def __init__(self, n_input: int, n_targets: int, n_classes: int, dropout=0.2, n_hidden=512):
         super().__init__()
 
         self.classifier = Sequential(
             Linear(n_input, n_hidden),
             LayerNorm(n_hidden),
-            BatchNorm1d(n_hidden),
-            ReLU()
+            BatchNorm1d(n_targets),
+            ReLU(),
             Dropout(dropout),
             Linear(n_hidden, n_classes)
         )
@@ -119,6 +119,7 @@ class MyCorefResolver(Module):
         self.model = model
 
         # spanをただ単にconcatする方法もありな気がした
+        # 例のkaggleを参考に
         self.span_extractor_1 = SelfAttentiveSpanExtractor(
             input_dim=model.config.hidden_size)
         self.span_extractor_2 = SelfAttentiveSpanExtractor(
@@ -126,7 +127,7 @@ class MyCorefResolver(Module):
 
         d_span_1 = self.span_extractor_1.get_output_dim()
         d_span_2 = self.span_extractor_2.get_output_dim()
-        self.head = MLPHead(d_span_1 + d_span_2, n_classes)
+        self.head = MLPHead(d_span_1 + d_span_2, 2, n_classes)
 
     def forward(self,
                 input_ids: Tensor,
