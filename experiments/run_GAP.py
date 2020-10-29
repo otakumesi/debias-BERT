@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam
 from dotenv import load_dotenv
 from datasets import load_dataset
+from catalyst import dl
 
 from arguments import ModelArguments, WinobiasDataArguments, TrainingArguments
 from models import MyCorefResolver
@@ -68,7 +69,7 @@ def run():
             model_args.model_name_or_path, cache_dir=model_args.cache_dir, use_fast=True)
 
     train_set, valid_set, test_set = load_dataset(
-        'gap', split=['train[:3]', 'validation[:3]', 'test[:3]'])
+        'gap', split=['train', 'validation', 'test'])
 
     # For Output files
     test_set_ids = test_set['ID'].copy()
@@ -107,12 +108,16 @@ def run():
         model=resolver,
         optimizer=optimizer,
         loaders=train_loaders,
-        # num_epochs=train_args.num_epochs,
-        num_epochs=2,
+        num_epochs=train_args.num_epochs,
         initial_seed=train_args.seed,
         logdir=OUTPUT_PATH,
         verbose=True,
-        distributed=True if device == 'cuda' else False
+        distributed=True if device == 'cuda' else False,
+        callbacks={
+            'optimizer': dl.optimizercallback(metric_key='loss',
+                                              grad_clip_params={'func': 'clip_grad_norm_',
+                                                                'max_norm': 1,
+                                                                'norm_type': 2})}
     )
 
     experiment.log_model('Coref with BERT', OUTPUT_PATH / 'checkpoints')
