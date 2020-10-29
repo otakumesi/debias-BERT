@@ -114,9 +114,9 @@ def run():
         verbose=True,
         distributed=True if device == 'cuda' else False,
         callbacks={
-            'optimizer': dl.optimizercallback(metric_key='loss',
+            'optimizer': dl.OptimizerCallback(metric_key='loss',
                                               grad_clip_params={'func': 'clip_grad_norm_',
-                                                                'max_norm': 1,
+                                                                'max_norm': 5, # the parameter from https://openreview.net/pdf?id=SJzSgnRcKX
                                                                 'norm_type': 2})}
     )
 
