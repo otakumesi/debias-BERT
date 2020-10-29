@@ -38,7 +38,7 @@ experiment = Experiment(api_key=API_KEY,
                         auto_output_logging='simple')
 
 DATASET_PATH = Path("data/winobias")
-OUTPUT_PATH = Path('runs') / TIMESTAMP
+OUTPUT_PATH = Path('runs') / 'GAP' / TIMESTAMP
 
 
 def run():
@@ -67,17 +67,18 @@ def run():
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.model_name_or_path, cache_dir=model_args.cache_dir, use_fast=True)
 
-    train_set, valid_set, test_set = load_dataset('gap', split=['train', 'validation', 'test'])
+    train_set, valid_set, test_set = load_dataset(
+        'gap', split=['train[:3]', 'validation[:3]', 'test[:3]'])
 
     # For Output files
     test_set_ids = test_set['ID'].copy()
-    test_set_pronouns = test_set['Pronoun'].copy()
 
     train_set = prepare_gap(train_set, tokenizer)
     valid_set = prepare_gap(valid_set, tokenizer)
     test_set = prepare_gap(test_set, tokenizer)
 
-    columns = ['input_ids', 'attention_mask', 'token_type_ids', 'a_span_indeces', 'b_span_indeces', 'labels']
+    columns = ['input_ids', 'attention_mask', 'token_type_ids',
+               'a_span_indeces', 'b_span_indeces', 'p_span_indeces', 'labels']
     train_set.set_format(type='torch', columns=columns)
     valid_set.set_format(type='torch', columns=columns)
     test_set.set_format(type='torch', columns=columns)
@@ -106,11 +107,12 @@ def run():
         model=resolver,
         optimizer=optimizer,
         loaders=train_loaders,
-        num_epochs=train_args.num_epochs,
+        # num_epochs=train_args.num_epochs,
+        num_epochs=2,
         initial_seed=train_args.seed,
         logdir=OUTPUT_PATH,
         verbose=True,
-        distributed=True
+        distributed=True if device == 'cuda' else False
     )
 
     experiment.log_model('Coref with BERT', OUTPUT_PATH / 'checkpoints')
@@ -118,19 +120,17 @@ def run():
     test_loader = DataLoader(test_set, batch_size=train_args.test_batch_size)
     with open(OUTPUT_PATH / 'gap-system-output.tsv', 'w') as f:
         writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
-        headers = ['ID', 'Pronoun', 'A-coref', 'B-coref']
-        writer.writerow(headers)
         for i, preds in enumerate(runner.predict_loader(loader=test_loader)):
             pred_probs = F.softmax(preds, -1)
             pred_labels = pred_probs.max(dim=-1).indices
 
-            for j, label in enumerate(pred_labels):
-                a_coref = 'True' if label == 1 else 'False'
-                b_coref = 'True' if label == 2 else 'False'
+            for j, (label_1, label_2) in enumerate(pred_labels):
+                a_coref = 'True' if label_1 == 1 else 'False'
+                b_coref = 'True' if label_2 == 1 else 'False'
 
                 idx = i*train_args.test_batch_size+j
                 writer.writerow(
-                    [test_set_ids[idx], test_set_pronouns[idx], a_coref, b_coref])
+                    [test_set_ids[idx], a_coref, b_coref])
 
 
 if __name__ == "__main__":

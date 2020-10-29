@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 import torch
 from torch import Tensor, IntTensor, LongTensor
 import torch.nn.functional as F
-from torch.nn import Module, Sequential, LSTM, ReLU, Linear, Dropout, Tanh, BatchNorm1d, Softmax
+from torch.nn import Module, Sequential, LSTM, ReLU, Linear, Dropout, Tanh, LayerNorm, Softmax
 from overrides import overrides
 
 from allennlp_models.coref.models.coref import CoreferenceResolver
@@ -96,8 +96,8 @@ class MLPHead(Module):
 
         self.classifier = Sequential(
             Linear(n_input, n_hidden),
-            BatchNorm1d(n_hidden),
-            ReLU(),
+            Tanh(),
+            LayerNorm(n_hidden),
             Dropout(dropout),
             Linear(n_hidden, n_classes)
         )
@@ -112,7 +112,7 @@ class MyCorefResolver(Module):
     # https://www.kaggle.com/mateiionita/taming-the-bert-a-baseline
     # https://www.kaggle.com/ceshine/pytorch-bert-baseline-public-score-0-54
 
-    def __init__(self, model: Module, n_classes: int = 3, n_hidden: int = 1024):
+    def __init__(self, model: Module, n_classes: int = 2, n_hidden: int = 1024):
         super().__init__()
 
         self.model = model
@@ -129,16 +129,17 @@ class MyCorefResolver(Module):
                 input_ids: Tensor,
                 attention_mask: Tensor,
                 token_type_ids: Tensor,
-                a_span_indeces: LongTensor,
-                b_span_indeces: LongTensor
+                a_span_pair_indeces: LongTensor,
+                b_span_pair_indeces: LongTensor
                 ):
 
         model_outputs, _ = self.model(
             input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
-        spans_1 = self.span_extractor_1(model_outputs, a_span_indeces, attention_mask)
-        spans_2 = self.span_extractor_2(model_outputs, b_span_indeces, attention_mask)
 
-        concatted_spans = torch.cat((spans_1, spans_2), -1).squeeze(0)
+        spans_1 = self.span_extractor_1(model_outputs, a_span_pair_indeces)
+        spans_2 = self.span_extractor_2(model_outputs, b_span_pair_indeces)
+
+        concatted_spans = torch.cat((spans_1, spans_2), -1)
         head_outputs = self.head(concatted_spans)
 
         return head_outputs

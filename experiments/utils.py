@@ -15,16 +15,12 @@ def extract_spans_from_offset_maps(offset_maps, start, end):
     if span_start == 0:
         span_start += 1
 
-    return (span_start, span_end)
+    return [span_start, span_end]
 
 
 def prepare_gap(datasets, tokenizer, max_token_len=500):
     def make_label(example):
-        if example["A-coref"] == 1:
-            return {"labels": 1}
-        if example["B-coref"] == 1:
-            return {"labels": 2}
-        return {"labels": 0}
+        return {"labels": [example["A-coref"], example["B-coref"]]}
 
     def make_spans(example):
         p_start = example["Pronoun-offset"]
@@ -41,8 +37,9 @@ def prepare_gap(datasets, tokenizer, max_token_len=500):
         a_indeces = extract_spans_from_offset_maps(offset_maps, a_start, a_end)
         b_indeces = extract_spans_from_offset_maps(offset_maps, b_start, b_end)
 
-        return {"a_span_indeces": [a_indeces, p_indeces],
-                "b_span_indeces": [b_indeces, p_indeces]}
+        return {"a_span_indeces": a_indeces,
+                "b_span_indeces": b_indeces,
+                "p_span_indeces": p_indeces}
 
     datasets = datasets.map(make_label, remove_columns=['A-coref', 'B-coref'])
     datasets = datasets.map(lambda example: tokenizer([t.lower() for t in example["Text"]],
