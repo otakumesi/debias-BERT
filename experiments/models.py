@@ -23,6 +23,7 @@ from allennlp.modules import FeedForward
 from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
 from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
 from allennlp.modules.token_embedders import PretrainedTransformerEmbedder
+from allennlp.nn.util import batched_span_select
 
 
 class AttentionDebiaser(Module):
@@ -70,50 +71,54 @@ class BiasLogProbabilityDebiaser(Module):
         super().__init__()
         self.model = model
 
-    def forward(self,
-                mask_indeces: Tensor,
-                first_ids: Tensor,
-                second_ids: Tensor,
-                biased_input_ids: Tensor,
-                biased_token_type_ids: Tensor,
-                biased_attention_mask: Tensor,
-                base_input_ids: Tensor,
-                base_token_type_ids: Tensor,
-                base_attention_mask: Tensor
-                ):
+    def forward(
+        self,
+        mask_indeces: Tensor,
+        first_ids: Tensor,
+        second_ids: Tensor,
+        biased_input_ids: Tensor,
+        biased_token_type_ids: Tensor,
+        biased_attention_mask: Tensor,
+        base_input_ids: Tensor,
+        base_token_type_ids: Tensor,
+        base_attention_mask: Tensor,
+    ):
 
         biased_log_probs = self.calc_log_probs(
-            biased_input_ids, biased_token_type_ids, biased_attention_mask)
+            biased_input_ids, biased_token_type_ids, biased_attention_mask
+        )
         base_log_probs = self.calc_log_probs(
-            base_input_ids, base_token_type_ids, base_attention_mask)
+            base_input_ids, base_token_type_ids, base_attention_mask
+        )
 
         mask_indeces = mask_indeces.view(-1, 1, 1)
         biased_mask_log_probs = biased_log_probs.gather(
-            index=mask_indeces.repeat(1, 1, biased_log_probs.shape[2]), dim=1)
+            index=mask_indeces.repeat(1, 1, biased_log_probs.shape[2]), dim=1
+        )
         base_mask_log_probs = base_log_probs.gather(
-            index=mask_indeces.repeat(1, 1, base_log_probs.shape[2]), dim=1)
+            index=mask_indeces.repeat(1, 1, base_log_probs.shape[2]), dim=1
+        )
 
-        first_increased_log_probs = self.calc_increased_log_prob_scores(biased_mask_log_probs,
-                                                                        base_mask_log_probs,
-                                                                        first_ids)
-        second_increased_log_probs = self.calc_increased_log_prob_scores(biased_mask_log_probs,
-                                                                         base_mask_log_probs,
-                                                                         second_ids)
+        first_increased_log_probs = self.calc_increased_log_prob_scores(
+            biased_mask_log_probs, base_mask_log_probs, first_ids
+        )
+        second_increased_log_probs = self.calc_increased_log_prob_scores(
+            biased_mask_log_probs, base_mask_log_probs, second_ids
+        )
 
         return (F.mse_loss(first_increased_log_probs, second_increased_log_probs),)
 
 
 class MLPHead(Module):
-    def __init__(self, n_input: int, n_targets: int, n_classes: int, dropout=0.2, n_hidden=512):
+    def __init__(self, n_input: int, n_classes: int, n_hidden: int, dropout=None):
         super().__init__()
 
         self.classifier = Sequential(
             Linear(n_input, n_hidden),
-            LayerNorm(n_hidden),
-            BatchNorm1d(n_targets),
+            BatchNorm1d(n_hidden),
             ReLU(),
             Dropout(dropout),
-            Linear(n_hidden, n_classes)
+            Linear(n_hidden, n_classes),
         )
 
     def forward(self, spans):
