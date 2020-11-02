@@ -4,40 +4,35 @@ import os
 import csv
 import logging
 import random
-from datetime import datetime
 from pathlib import Path
 
 import numpy as np
-from transformers import HfArgumentParser, TrainingArguments, get_linear_schedule_with_warmup
-from transformers import AutoModel, AutoTokenizer, AutoConfig
+from transformers import HfArgumentParser, TrainingArguments, Trainer
+from transformers import AutoModel, AutoTokenizer, AutoConfig, AdamW
 import torch
 import torch.nn.functional as F
-from torch.optim import Adam
 from dotenv import load_dotenv
 from datasets import load_dataset
-from transformers import Trainer
 
 from arguments import ModelArguments, WinobiasDataArguments
 from models import MyCorefResolver
 from utils import prepare_gap
 
 ARGS_JSON_FILE = "args.json"
-TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 logging.basicConfig(level=logging.INFO)
 
 load_dotenv()
 
-API_KEY = os.getenv('COMET_API_KEY')
-WORKSPACE = os.getenv('COMET_WORKSPACE')
-PROJECT_NAME = os.getenv('COMET_PROJECT_NAME')
+API_KEY = os.getenv("COMET_API_KEY")
+WORKSPACE = os.getenv("COMET_WORKSPACE")
+PROJECT_NAME = os.getenv("COMET_PROJECT_NAME")
 
-experiment = Experiment(api_key=API_KEY,
-                        workspace=WORKSPACE,
-                        project_name=PROJECT_NAME,
-                        auto_output_logging='simple')
-
-DATASET_PATH = Path("data/winobias")
-OUTPUT_PATH = Path('runs') / 'GAP' / TIMESTAMP
+experiment = Experiment(
+    api_key=API_KEY,
+    workspace=WORKSPACE,
+    project_name=PROJECT_NAME,
+    auto_output_logging="simple",
+)
 
 
 def run():

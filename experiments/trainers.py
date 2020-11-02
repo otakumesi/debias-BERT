@@ -19,11 +19,11 @@ class CorefRunner(Runner):
             token_type_ids=batch["token_type_ids"],
             p_span_indeces=batch["p_span_indeces"],
             a_span_indeces=batch["a_span_indeces"],
-            b_span_indeces=batch["b_span_indeces"]
+            b_span_indeces=batch["b_span_indeces"],
         )
 
     def _handle_batch(self, batch):
-        labels = batch['labels']
+        labels = batch["labels"]
 
         logits = self.model(
             input_ids=batch["input_ids"],
@@ -31,9 +31,9 @@ class CorefRunner(Runner):
             token_type_ids=batch["token_type_ids"],
             p_span_indeces=batch["p_span_indeces"],
             a_span_indeces=batch["a_span_indeces"],
-            b_span_indeces=batch["b_span_indeces"]
+            b_span_indeces=batch["b_span_indeces"],
         )
 
         loss = F.cross_entropy(logits, labels.long())
 
-        self.batch_metrics = {'loss': loss}
+        self.batch_metrics = {"loss": loss}

@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 DATASET_PATH = Path("data/winobias")
-OUTPUT_PATH = PATH('runs') / TIMESTAMP
+OUTPUT_PATH = PATH("runs") / TIMESTAMP
 
 
 def run():
@@ -40,8 +40,7 @@ def run():
     np.random.seed(train_args.seed)
     torch.manual_seed(train_args.seed)
 
-    tokenizer = PretrainedTransformerTokenizer(
-        model_name=model_args.model_name_or_path)
+    tokenizer = PretrainedTransformerTokenizer(model_name=model_args.model_name_or_path)
     token_indexer = PretrainedTransformerIndexer(
         model_name=model_args.model_name_or_path
     )
@@ -89,18 +88,20 @@ def run():
             optimizer=optimizer,
             data_loader=train_loader,
             num_epochs=train_args.num_epochs,
-            cuda_device=1 if torch.cuda.is_available() else -1
+            cuda_device=1 if torch.cuda.is_available() else -1,
         )
 
         trainer.train()
 
         try:
             OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
-            output_file = OUTPUT_PATH / f'{ds_attr}_stereotype_result.txt'
-            evaluate(model=model,
-                     data_loader=test_loader,
-                     output_file=output_file,
-                     cuda_device=1 if torch.cuda.is_available() else -1)
+            output_file = OUTPUT_PATH / f"{ds_attr}_stereotype_result.txt"
+            evaluate(
+                model=model,
+                data_loader=test_loader,
+                output_file=output_file,
+                cuda_device=1 if torch.cuda.is_available() else -1,
+            )
         except BaseException as e:
             OUTPUT_PATH.rmdir()
             raise e
