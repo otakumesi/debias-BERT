@@ -1,69 +1,99 @@
-from typing import List, Dict, Any, Optional
+from typing import Optional
 
 import torch
-from torch import Tensor, IntTensor, LongTensor, BoolTensor
+from torch import Tensor, LongTensor, BoolTensor
 import torch.nn.functional as F
-from torch.nn import (
-    Module,
-    Sequential,
-    LSTM,
-    ReLU,
-    Linear,
-    Dropout,
-    BatchNorm1d,
-    LayerNorm,
-)
-from overrides import overrides
-
-from allennlp_models.coref.models.coref import CoreferenceResolver
-from allennlp.models.model import Model
-from allennlp.modules.span_extractors import SelfAttentiveSpanExtractor
-from allennlp.data import Vocabulary, TextFieldTensors
-from allennlp.modules import FeedForward
-from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
-from allennlp.modules.text_field_embedders import BasicTextFieldEmbedder
-from allennlp.modules.token_embedders import PretrainedTransformerEmbedder
+from torch.nn import Module, Sequential, ReLU, Linear, Dropout, BatchNorm1d
 from allennlp.nn.util import batched_span_select
+
+
+class CosineDebiaser(Module):
+    def __init__(self, model: Module):
+        super().__init__()
+        self.model = model
+        self.config = model.config
+
+    def forward(
+        self,
+        more_input_ids: Tensor,
+        more_token_type_ids: Tensor,
+        more_attention_mask: Tensor,
+        less_input_ids: Tensor,
+        less_token_type_ids: Tensor,
+        less_attention_mask: Tensor,
+        unmodified_mask: Tensor
+    ):
+        more_outputs = self.model(
+            input_ids=more_input_ids,
+            token_type_ids=more_token_type_ids,
+            attention_mask=more_attention_mask,
+            output_hidden_states=True,
+            return_dict=True,
+        )
+
+        less_outputs = self.model(
+            input_ids=less_input_ids,
+            token_type_ids=less_token_type_ids,
+            attention_mask=less_attention_mask,
+            output_hidden_states=True,
+            return_dict=True,
+        )
+
+        last_layer = self.config.num_hidden_layers
+        more_hiddens = more_outputs.hidden_states[last_layer]
+        less_hiddens = less_outputs.hidden_states[last_layer]
+
+        # reject modified tokens
+        unmodified_mask = unmodified_mask.unsqueeze(2).repeat_interleave(dim=2, repeats=self.config.hidden_size)
+        more_hiddens *= unmodified_mask
+        less_hiddens *= unmodified_mask
+
+        loss = torch.mean(torch.sum(1 / 2 * ((1 - F.cosine_similarity(more_hiddens, less_hiddens, dim=2)) ** 2), dim=1))
+        return (loss,)
 
 
 class AttentionDebiaser(Module):
     def __init__(self, model: Module):
         super().__init__()
         self.model = model
+        self.config = model.config
 
     def forward(
         self,
-        orig_input_ids: Tensor,
-        orig_token_type_ids: Tensor,
-        orig_attention_mask: Tensor,
-        swapped_input_ids: Tensor,
-        swapped_token_type_ids: Tensor,
-        swapped_attention_mask: Tensor,
+        more_input_ids: Tensor,
+        more_token_type_ids: Tensor,
+        more_attention_mask: Tensor,
+        less_input_ids: Tensor,
+        less_token_type_ids: Tensor,
+        less_attention_mask: Tensor,
     ):
-        orig_outputs = self.model(
-            input_ids=orig_input_ids,
-            token_type_ids=orig_token_type_ids,
-            attention_mask=orig_attention_mask,
+        more_outputs = self.model(
+            input_ids=more_input_ids,
+            token_type_ids=more_token_type_ids,
+            attention_mask=more_attention_mask,
             output_attentions=True,
             return_dict=True,
         )
 
-        swapped_outputs = self.model(
-            input_ids=swapped_input_ids,
-            token_type_ids=swapped_token_type_ids,
-            attention_mask=swapped_attention_mask,
+        less_outputs = self.model(
+            input_ids=less_input_ids,
+            token_type_ids=less_token_type_ids,
+            attention_mask=less_attention_mask,
             output_attentions=True,
             return_dict=True,
         )
 
-        orig_attns = torch.stack(orig_outputs.attentions).permute(1, 0, 2, 3, 4)
-        swapped_attns = torch.stack(swapped_outputs.attentions).permute(1, 0, 2, 3, 4)
+        more_attns = torch.stack(more_outputs.attentions).permute(1, 0, 2, 3, 4)
+        less_attns = torch.stack(less_outputs.attentions).permute(1, 0, 2, 3, 4)
+        attn_size = self.config.num_attention_heads * self.config.num_hidden_layers
 
         # Jensen–Shannon divergence
-        js_divs = 1 / 2 * F.kl_div(
-            orig_attns, swapped_attns, reduction="none"
-        ) + 1 / 2 * F.kl_div(swapped_attns, orig_attns, reduction="none")
-        return torch.sum(js_divs)
+        # js_divs = 1 / 2 * F.kl_div(
+        #     more_attns, less_attns, reduction="none"
+        # ) + 1 / 2 * F.kl_div(less_attns, more_attns, reduction="none")
+        # return (torch.sum(js_divs),)
+
+        return (F.kl_div(more_attns, less_attns, reduction="batchmean") / attn_size,)
 
 
 class BiasLogProbabilityDebiaser(Module):
@@ -192,78 +222,3 @@ class MyCorefResolver(Module):
         summed_span_mask = span_mask.sum(2)
 
         return summed_span_embeddings / torch.clamp_min(summed_span_mask, 1)
-
-
-class AllenNLPCorefResolver(Model):
-    def __init__(
-        self,
-        vocab: Vocabulary,
-        model_name: str = None,
-        override_weights_file: str = None,
-    ):
-        super().__init__(vocab)
-
-        token_embedder = PretrainedTransformerEmbedder(
-            model_name=model_name, override_weights_file=override_weights_file
-        )
-        text_field_embedder = BasicTextFieldEmbedder(
-            token_embedders={"tokens": token_embedder}
-        )
-
-        # Hyperparameters is referred to the original paper and BERT analysis paper.
-        # https://www.aclweb.org/anthology/D17-1018.pdf
-        # https://arxiv.org/pdf/1908.09091.pdf
-        feature_size = 20
-        embedding_dim = token_embedder.get_output_dim()
-        context_layer = PytorchSeq2SeqWrapper(
-            LSTM(
-                input_size=embedding_dim,
-                hidden_size=200,
-                num_layers=1,
-                dropout=0.3,
-                bidirectional=True,
-                batch_first=True,
-            )
-        )
-        mention_feedforward = FeedForward(
-            input_dim=embedding_dim + 2 * context_layer.get_output_dim() + feature_size,
-            num_layers=2,
-            hidden_dims=[150, 150],
-            activations=[ReLU(), ReLU()],
-            dropout=[0.3, 0.3],
-        )
-        antecedent_feedforward = FeedForward(
-            input_dim=mention_feedforward.get_input_dim() * 3 + feature_size,
-            num_layers=2,
-            hidden_dims=[150, 150],
-            activations=[ReLU(), ReLU()],
-            dropout=[0.3, 0.3],
-        )
-
-        self.resolver = CoreferenceResolver(
-            vocab=vocab,
-            text_field_embedder=text_field_embedder,
-            context_layer=context_layer,
-            mention_feedforward=mention_feedforward,
-            antecedent_feedforward=antecedent_feedforward,
-            feature_size=feature_size,
-            max_span_width=10,
-            spans_per_word=0.4,
-            max_antecedents=250,
-        )
-
-    @overrides
-    def forward(
-        self,
-        text: TextFieldTensors,
-        spans: IntTensor,
-        metadata: List[Dict[str, Any]],
-        span_labels: IntTensor = None,
-    ) -> Dict[str, Tensor]:
-        return self.resolver(
-            text=text, spans=spans, span_labels=span_labels, metadata=metadata
-        )
-
-    @overrides
-    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return self.resolver.get_metrics(reset)
