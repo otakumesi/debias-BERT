@@ -4,6 +4,7 @@ import os
 import logging
 import random
 from pathlib import Path
+import difflib
 
 import numpy as np
 from datasets import load_dataset
@@ -15,7 +16,7 @@ from torch.optim import SGD
 from dotenv import load_dotenv
 
 from arguments import ModelArguments, DataArguments
-from models import CosineDebiaser
+from models import BiasDivergenceDebiaser
 
 ARGS_JSON_FILE = "args.json"
 logging.basicConfig(level=logging.INFO)
@@ -60,7 +61,7 @@ def train(model_args, data_args, train_args):
     model = AutoModelWithLMHead.from_pretrained(
         model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir
     )
-    debiaser = CosineDebiaser(model)
+    debiaser = BiasDivergenceDebiaser(model)
 
     MAX_LEN = 100
     dataset = dataset.map(
@@ -80,14 +81,47 @@ def train(model_args, data_args, train_args):
         }
     )
 
-    dataset = dataset.filter(lambda ex: len([i for i in ex["more_input_ids"] if i != 0]) == len([i for i in  ex["less_input_ids"] if i != 0]))
+    def get_indices(ex):
+        m_input_ids = [str(x) for x in ex["more_input_ids"]]
+        l_input_ids = [str(x) for x in ex["less_input_ids"]]
 
-    dataset = dataset.map(
-        lambda ex: {"unmodified_mask": [m == l for m, l in zip(ex["more_input_ids"], ex["less_input_ids"])]}
-    )
+        matcher = difflib.SequenceMatcher(None, m_input_ids, l_input_ids)
+        more_result, less_result = [], []
 
-    orig_columns = ["input_ids", "token_type_ids", "attention_mask"]
-    columns = [f"more_{c}" for c in orig_columns] + [f"less_{c}" for c in orig_columns] + ["unmodified_mask"]
+        for op, m_start_pos, m_end_pos, l_start_pos, l_end_pos in matcher.get_opcodes():
+            if op == 'equal':
+                more_result += [x for x in range(m_start_pos, m_end_pos, 1)]
+                less_result += [x for x in range(l_start_pos, l_end_pos, 1)]
+
+        more_mask = torch.ones(MAX_LEN, dtype=torch.int64)
+        more_len = len(more_result)
+        if more_len < MAX_LEN:
+            more_diff = MAX_LEN - more_len
+            more_mask.scatter_(0, torch.LongTensor(range(more_len, more_len + more_diff)), 0)
+            more_result.extend([MAX_LEN - 1] * more_diff)
+            
+        less_mask = torch.ones(MAX_LEN, dtype=torch.int64)
+        less_len = len(less_result)
+        if less_len < MAX_LEN:
+            less_diff = MAX_LEN - less_len
+            less_mask.scatter_(0, torch.LongTensor(range(less_len, less_len + less_diff)), 0)
+            less_result.extend([MAX_LEN - 1] * less_diff)
+
+        return {'more_indices': more_result,
+                'more_mask': more_mask,
+                'less_indices': less_result,
+                'less_mask': less_mask}
+
+    dataset = dataset.map(get_indices)
+
+    # dataset = dataset.filter(lambda ex: len([i for i in ex["more_input_ids"] if i != 0]) == len([i for i in  ex["less_input_ids"] if i != 0]))
+
+    # dataset = dataset.map(
+    #     lambda ex: {"unmodified_mask": [m == l for m, l in zip(ex["more_input_ids"], ex["less_input_ids"])]}
+    # )
+
+    orig_columns = ["input_ids", "token_type_ids", "attention_mask", "indices", "mask"]
+    columns = [f"more_{c}" for c in orig_columns] + [f"less_{c}" for c in orig_columns] # + ["unmodified_mask"]
     dataset.set_format(type="torch", columns=columns)
 
     no_decay = ["bias", "LayerNorm.weight"]

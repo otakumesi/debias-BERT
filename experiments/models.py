@@ -96,47 +96,60 @@ class AttentionDebiaser(Module):
         return (F.kl_div(more_attns, less_attns, reduction="batchmean") / attn_size,)
 
 
-class BiasLogProbabilityDebiaser(Module):
+class BiasDivergenceDebiaser(Module):
     def __init__(self, model: Module):
         super().__init__()
         self.model = model
+        self.config = model.config
 
     def forward(
         self,
-        mask_indeces: Tensor,
-        first_ids: Tensor,
-        second_ids: Tensor,
-        biased_input_ids: Tensor,
-        biased_token_type_ids: Tensor,
-        biased_attention_mask: Tensor,
-        base_input_ids: Tensor,
-        base_token_type_ids: Tensor,
-        base_attention_mask: Tensor,
+        more_input_ids: Tensor,
+        more_token_type_ids: Tensor,
+        more_attention_mask: Tensor,
+        more_indices: Tensor,
+        more_mask: Tensor,
+        less_input_ids: Tensor,
+        less_token_type_ids: Tensor,
+        less_attention_mask: Tensor,
+        less_indices: Tensor,
+        less_mask: Tensor
     ):
 
-        biased_log_probs = self.calc_log_probs(
-            biased_input_ids, biased_token_type_ids, biased_attention_mask
-        )
-        base_log_probs = self.calc_log_probs(
-            base_input_ids, base_token_type_ids, base_attention_mask
-        )
-
-        mask_indeces = mask_indeces.view(-1, 1, 1)
-        biased_mask_log_probs = biased_log_probs.gather(
-            index=mask_indeces.repeat(1, 1, biased_log_probs.shape[2]), dim=1
-        )
-        base_mask_log_probs = base_log_probs.gather(
-            index=mask_indeces.repeat(1, 1, base_log_probs.shape[2]), dim=1
+        more_outputs = self.model(
+            input_ids=more_input_ids,
+            token_type_ids=more_token_type_ids,
+            attention_mask=more_attention_mask,
+            output_hidden_states=True,
+            return_dict=True,
         )
 
-        first_increased_log_probs = self.calc_increased_log_prob_scores(
-            biased_mask_log_probs, base_mask_log_probs, first_ids
-        )
-        second_increased_log_probs = self.calc_increased_log_prob_scores(
-            biased_mask_log_probs, base_mask_log_probs, second_ids
+        less_outputs = self.model(
+            input_ids=less_input_ids,
+            token_type_ids=less_token_type_ids,
+            attention_mask=less_attention_mask,
+            output_hidden_states=True,
+            return_dict=True,
         )
 
-        return (F.mse_loss(first_increased_log_probs, second_increased_log_probs),)
+        more_logits = more_outputs.logits * more_attention_mask.unsqueeze(2)
+        less_logits = less_outputs.logits * less_attention_mask.unsqueeze(2)
+
+        vocab_size = self.model.config.vocab_size
+
+        more_logits_indices = more_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=vocab_size)
+        more_logits = more_logits.gather(dim=1, index=more_logits_indices)
+        more_logits = more_logits * more_mask.unsqueeze(2)
+
+        less_logits_indices = less_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=vocab_size)
+        less_logits = less_logits.gather(dim=1, index=less_logits_indices)
+        less_logits = less_logits * less_mask.unsqueeze(2)
+
+        more_log_probs = torch.log_softmax(more_logits, dim=-1)
+        less_probs = torch.softmax(less_logits, dim=-1)
+
+        loss = F.kl_div(more_log_probs, less_probs, reduction="batchmean")
+        return (loss,)
 
 
 class MLPHead(Module):
