@@ -7,97 +7,8 @@ from torch.nn import Module, Sequential, ReLU, Linear, Dropout, BatchNorm1d
 from allennlp.nn.util import batched_span_select
 
 
-class CosineDebiaser(Module):
-    def __init__(self, model: Module):
-        super().__init__()
-        self.model = model
-        self.config = model.config
-
-    def forward(
-        self,
-        more_input_ids: Tensor,
-        more_token_type_ids: Tensor,
-        more_attention_mask: Tensor,
-        less_input_ids: Tensor,
-        less_token_type_ids: Tensor,
-        less_attention_mask: Tensor,
-        unmodified_mask: Tensor
-    ):
-        more_outputs = self.model(
-            input_ids=more_input_ids,
-            token_type_ids=more_token_type_ids,
-            attention_mask=more_attention_mask,
-            output_hidden_states=True,
-            return_dict=True,
-        )
-
-        less_outputs = self.model(
-            input_ids=less_input_ids,
-            token_type_ids=less_token_type_ids,
-            attention_mask=less_attention_mask,
-            output_hidden_states=True,
-            return_dict=True,
-        )
-
-        last_layer = self.config.num_hidden_layers
-        more_hiddens = more_outputs.hidden_states[last_layer]
-        less_hiddens = less_outputs.hidden_states[last_layer]
-
-        # reject modified tokens
-        unmodified_mask = unmodified_mask.unsqueeze(2).repeat_interleave(dim=2, repeats=self.config.hidden_size)
-        more_hiddens *= unmodified_mask
-        less_hiddens *= unmodified_mask
-
-        loss = torch.mean(torch.sum(1 / 2 * ((1 - F.cosine_similarity(more_hiddens, less_hiddens, dim=2)) ** 2), dim=1))
-        return (loss,)
-
-
-class AttentionDebiaser(Module):
-    def __init__(self, model: Module):
-        super().__init__()
-        self.model = model
-        self.config = model.config
-
-    def forward(
-        self,
-        more_input_ids: Tensor,
-        more_token_type_ids: Tensor,
-        more_attention_mask: Tensor,
-        less_input_ids: Tensor,
-        less_token_type_ids: Tensor,
-        less_attention_mask: Tensor,
-    ):
-        more_outputs = self.model(
-            input_ids=more_input_ids,
-            token_type_ids=more_token_type_ids,
-            attention_mask=more_attention_mask,
-            output_attentions=True,
-            return_dict=True,
-        )
-
-        less_outputs = self.model(
-            input_ids=less_input_ids,
-            token_type_ids=less_token_type_ids,
-            attention_mask=less_attention_mask,
-            output_attentions=True,
-            return_dict=True,
-        )
-
-        more_attns = torch.stack(more_outputs.attentions).permute(1, 0, 2, 3, 4)
-        less_attns = torch.stack(less_outputs.attentions).permute(1, 0, 2, 3, 4)
-        attn_size = self.config.num_attention_heads * self.config.num_hidden_layers
-
-        # Jensen–Shannon divergence
-        # js_divs = 1 / 2 * F.kl_div(
-        #     more_attns, less_attns, reduction="none"
-        # ) + 1 / 2 * F.kl_div(less_attns, more_attns, reduction="none")
-        # return (torch.sum(js_divs),)
-
-        return (F.kl_div(more_attns, less_attns, reduction="batchmean") / attn_size,)
-
-
-class BiasDivergenceDebiaser(Module):
-    def __init__(self, model: Module):
+class SentencePertubationNormalizer(Module):
+    def __init__(self, model: Module, k: float = 0.01):
         super().__init__()
         self.model = model
         self.config = model.config
@@ -145,10 +56,13 @@ class BiasDivergenceDebiaser(Module):
         less_logits = less_logits.gather(dim=1, index=less_logits_indices)
         less_logits = less_logits * less_mask.unsqueeze(2)
 
-        more_log_probs = torch.log_softmax(more_logits, dim=-1)
-        less_probs = torch.softmax(less_logits, dim=-1)
+        more_probs = torch.log_softmax(more_logits, dim=-1)
+        less_probs = torch.log_softmax(less_logits, dim=-1)
 
-        loss = F.kl_div(more_log_probs, less_probs, reduction="batchmean")
+        m_probs = (torch.exp(more_probs) + torch.exp(less_probs)) * 0.5
+        js_div = 0.5 * (F.kl_div(more_probs, m_probs, reduction="none") + F.kl_div(less_probs, m_probs, reduction="none"))
+
+        loss = js_div.sum(dim=(2, 1)).mean()
         return (loss,)
 
 

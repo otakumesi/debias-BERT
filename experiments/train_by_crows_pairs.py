@@ -10,13 +10,15 @@ import numpy as np
 from datasets import load_dataset
 from transformers import AutoModelWithLMHead, AutoConfig, AutoTokenizer
 from transformers import HfArgumentParser
-from transformers import TrainingArguments, Trainer, get_constant_schedule
+from transformers import TrainingArguments, Trainer
 import torch
+from torch import nn
 from torch.optim import SGD
 from dotenv import load_dotenv
 
 from arguments import ModelArguments, DataArguments
-from models import BiasDivergenceDebiaser
+from models import SentencePertubationNormalizer
+
 
 ARGS_JSON_FILE = "args.json"
 logging.basicConfig(level=logging.INFO)
@@ -65,9 +67,11 @@ def train(model_args, data_args, train_args):
     model = AutoModelWithLMHead.from_pretrained(
         model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir
     )
-    debiaser = BiasDivergenceDebiaser(model)
+    model = SentencePertubationNormalizer(model)
 
-    MAX_LEN = 100
+    MAX_LEN = 50
+    dataset = load_dataset("csv", data_files=str(DATASET_PATH), split="train")
+
     dataset = dataset.map(
         lambda ex: {
             f"more_{k}": v
