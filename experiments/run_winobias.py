@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 DATASET_PATH = Path("data/winobias")
-OUTPUT_PATH = PATH("runs") / TIMESTAMP
+OUTPUT_PATH = Path("runs") / TIMESTAMP
 
 
 def run():
