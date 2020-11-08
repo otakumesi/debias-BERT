@@ -3,62 +3,56 @@ from comet_ml import Experiment
 import os
 import logging
 import random
-from datetime import datetime
 from pathlib import Path
+import difflib
 
 import numpy as np
 from datasets import load_dataset
 from transformers import AutoModelWithLMHead, AutoConfig, AutoTokenizer
 from transformers import HfArgumentParser
-from transformers import TrainingArguments
+from transformers import TrainingArguments, Trainer
 import torch
+from torch import nn
 from torch.optim import SGD
 from dotenv import load_dotenv
 
 from arguments import ModelArguments, DataArguments
-from models import AttentionDebiaser
-from trainers import MyFineTuneTrainer
+from models import SentencePertubationNormalizer
+from mixout import MixLinear
+
 
 ARGS_JSON_FILE = "args.json"
-TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 logging.basicConfig(level=logging.INFO)
-
 load_dotenv()
 
 API_KEY = os.getenv("COMET_API_KEY")
 WORKSPACE = os.getenv("COMET_WORKSPACE")
 PROJECT_NAME = os.getenv("COMET_PROJECT_NAME")
 
-experiment = Experiment(
-    api_key=API_KEY,
-    workspace=WORKSPACE,
-    project_name=PROJECT_NAME,
-    auto_output_logging="simple",
-)
+experiment = Experiment(api_key=API_KEY, workspace=WORKSPACE, project_name=PROJECT_NAME)
 
-OUTPUT_PATH = Path("runs") / TIMESTAMP
+DATASET_PATH = Path("data") / "crows_pairs_anonymized.csv"
 
 
-def train():
-    parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
-    model_args, data_args, train_args = parser.parse_json_file(ARGS_JSON_FILE)
-
+def train(model_args, data_args, train_args):
     random.seed(train_args.seed)
     np.random.seed(train_args.seed)
     torch.manual_seed(train_args.seed)
 
-    dataset = load_dataset(
-        "json", data_files=data_args.dataset_path, field="data", split="train"
-    )
-
     # Load Transformers config
     if model_args.config_name:
         config = AutoConfig.from_pretrained(
-            model_args.config_name, cache_dir=model_args.cache_dir
+            model_args.config_name,
+            cache_dir=model_args.cache_dir,
+            hidden_dropout_prob=model_args.hidden_dropout_prob,
+            attention_probs_dropout_prob=model_args.attention_probs_dropout_prob
         )
     else:
         config = AutoConfig.from_pretrained(
-            model_args.model_name_or_path, cache_dir=model_args.cache_dir
+            model_args.model_name_or_path,
+            cache_dir=model_args.cache_dir,
+            hidden_dropout_prob=model_args.hidden_dropout_prob,
+            attention_probs_dropout_prob=model_args.attention_probs_dropout_prob
         )
 
     # Load Transformers Tokenizer
@@ -74,53 +68,78 @@ def train():
     model = AutoModelWithLMHead.from_pretrained(
         model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir
     )
-    loss = AttentionDebiaser(model)
+    model = SentencePertubationNormalizer(model)
 
-    device = "cuda" if torch.cuda.is_avaiable() else "cpu"
-    loss.to(device)
-
-    n_gpu = torch.cuda.device_count()
-    if n_gpu > 0:
-        torch.cuda.manual_seed_all(train_args.seed)
-    if n_gpu > 1:
-        loss = torch.nn.DataParallel(loss)
+    # Integrate Mixout
+    if model_args.mixout_prob > 0:
+        for sup_module in model.modules():
+            for name, module in sup_module.named_children():
+                if isinstance(module, nn.Dropout):
+                    module.p = 0.0
+                if isinstance(module, nn.Linear):
+                    target_state_dict = module.state_dict()
+                    bias = True if module.bias is not None else False
+                    new_module = MixLinear(
+                        module.in_features, module.out_features, bias, target_state_dict["weight"], model_args.mixout_prob
+                    )
+                    new_module.load_state_dict(target_state_dict)
+                    setattr(sup_module, name, new_module)
 
     MAX_LEN = 50
+    dataset = load_dataset("csv", data_files=str(DATASET_PATH), split="train")
+
     dataset = dataset.map(
-        lambda example: {
-            f"biased_{k}": v
+        lambda ex: {
+            f"more_{k}": v
             for k, v in tokenizer(
-                example["biased_sentence"], max_length=MAX_LEN, padding="max_length"
+                ex["sent_more"], max_length=MAX_LEN, padding="max_length"
             ).items()
         }
     )
     dataset = dataset.map(
-        lambda example: {
-            f"base_{k}": v
+        lambda ex: {
+            f"less_{k}": v
             for k, v in tokenizer(
-                example["base_sentence"], max_length=MAX_LEN, padding="max_length"
+                ex["sent_less"], max_length=MAX_LEN, padding="max_length"
             ).items()
         }
     )
-    dataset = dataset.map(
-        lambda example: {
-            "mask_indeces": example["biased_input_ids"].index(tokenizer.mask_token_id)
-        }
-    )
 
-    dataset = dataset.map(
-        lambda example: {
-            "first_ids": tokenizer.convert_tokens_to_ids(example["targets"][0]),
-            "second_ids": tokenizer.convert_tokens_to_ids(example["targets"][1]),
-        }
-    )
+    def get_indices(ex):
+        m_input_ids = [str(x) for x in ex["more_input_ids"]]
+        l_input_ids = [str(x) for x in ex["less_input_ids"]]
 
-    simple_columns = ["input_ids", "token_type_ids", "attention_mask"]
-    columns = (
-        [f"biased_{c}" for c in simple_columns]
-        + [f"base_{c}" for c in simple_columns]
-        + ["first_ids", "second_ids", "mask_indeces"]
-    )
+        matcher = difflib.SequenceMatcher(None, m_input_ids, l_input_ids)
+        more_result, less_result = [], []
+
+        for op, m_start_pos, m_end_pos, l_start_pos, l_end_pos in matcher.get_opcodes():
+            if op == 'equal':
+                more_result += [x for x in range(m_start_pos, m_end_pos, 1)]
+                less_result += [x for x in range(l_start_pos, l_end_pos, 1)]
+
+        more_mask = torch.ones(MAX_LEN, dtype=torch.int64)
+        more_len = len(more_result)
+        if more_len < MAX_LEN:
+            more_diff = MAX_LEN - more_len
+            more_mask.scatter_(0, torch.LongTensor(range(more_len, more_len + more_diff)), 0)
+            more_result.extend([MAX_LEN - 1] * more_diff)
+
+        less_mask = torch.ones(MAX_LEN, dtype=torch.int64)
+        less_len = len(less_result)
+        if less_len < MAX_LEN:
+            less_diff = MAX_LEN - less_len
+            less_mask.scatter_(0, torch.LongTensor(range(less_len, less_len + less_diff)), 0)
+            less_result.extend([MAX_LEN - 1] * less_diff)
+
+        return {'more_indices': more_result,
+                'more_mask': more_mask,
+                'less_indices': less_result,
+                'less_mask': less_mask}
+
+    dataset = dataset.map(get_indices)
+
+    orig_columns = ["input_ids", "token_type_ids", "attention_mask", "indices", "mask"]
+    columns = [f"more_{c}" for c in orig_columns] + [f"less_{c}" for c in orig_columns]
     dataset.set_format(type="torch", columns=columns)
 
     no_decay = ["bias", "LayerNorm.weight"]
@@ -128,35 +147,41 @@ def train():
         {
             "params": [
                 p
-                for n, p in loss.named_parameters()
+                for n, p in model.named_parameters()
                 if not any(nd in n for nd in no_decay)
             ],
             "weight_decay": train_args.weight_decay,
         },
         {
             "params": [
-                p for n, p in loss.named_parameters() if any(nd in n for nd in no_decay)
+                p
+                for n, p in model.named_parameters()
+                if any(nd in n for nd in no_decay)
             ],
             "weight_decay": 0.0,
         },
     ]
 
-    trainer = MyFineTuneTrainer(
-        model=loss,
+    optimizer = SGD(optimizer_grouped_parameters, lr=train_args.learning_rate)
+    # lr_scheduler = get_constant_schedule(optimizer)
+
+    trainer = Trainer(
+        model=model,
         args=train_args,
         train_dataset=dataset,
-        optimizers=(
-            SGD(optimizer_grouped_parameters, lr=train_args.learning_rate),
-            None,
-        ),
+        optimizers=(optimizer, None),
     )
 
     trainer.train()
 
-    OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
-    trainer.save_model(OUTPUT_PATH)
-    experiment.log_model("DebiasBERT", OUTPUT_PATH)
+    model_output_dir = Path(train_args.logging_dir)
+    trainer.model.model.save_pretrained(model_output_dir)
+    tokenizer.save_pretrained(model_output_dir)
 
 
 if __name__ == "__main__":
-    train()
+    parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
+    model_args, data_args, train_args = parser.parse_json_file(ARGS_JSON_FILE)
+
+    if train_args.do_train:
+        train(model_args, data_args, train_args)
