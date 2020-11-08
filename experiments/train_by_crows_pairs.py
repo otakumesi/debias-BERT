@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 
 from arguments import ModelArguments, DataArguments
 from models import SentencePertubationNormalizer
+from mixout import MixLinear
 
 
 ARGS_JSON_FILE = "args.json"
@@ -68,6 +69,21 @@ def train(model_args, data_args, train_args):
         model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir
     )
     model = SentencePertubationNormalizer(model)
+
+    # Integrate Mixout
+    if model_args.mixout_prob > 0:
+        for sup_module in model.modules():
+            for name, module in sup_module.named_children():
+                if isinstance(module, nn.Dropout):
+                    module.p = 0.0
+                if isinstance(module, nn.Linear):
+                    target_state_dict = module.state_dict()
+                    bias = True if module.bias is not None else False
+                    new_module = MixLinear(
+                        module.in_features, module.out_features, bias, target_state_dict["weight"], model_args.mixout_prob
+                    )
+                    new_module.load_state_dict(target_state_dict)
+                    setattr(sup_module, name, new_module)
 
     MAX_LEN = 50
     dataset = load_dataset("csv", data_files=str(DATASET_PATH), split="train")

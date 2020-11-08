@@ -34,6 +34,11 @@ class ModelArguments:
         default=0.1,
         metadata={"help": "dropout probability in attentions"}
     )
+    mixout_prob: float = field(
+        default=0,
+        metadata={"help": "mixout probaility in all linear layers"}
+    )
+
 
 
 @dataclass
