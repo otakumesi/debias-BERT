@@ -10,9 +10,6 @@ class ModelArguments:
             "help": "Path to pretrained model or model identifier from huggingface.co/models"
         },
     )
-    override_weights_file: str = field(
-        default=None, metadata={"help": "Path to weights file of trained models"}
-    )
     config_name: Optional[str] = field(
         default=None,
         metadata={
@@ -28,6 +25,14 @@ class ModelArguments:
     cache_dir: Optional[str] = field(
         default=None,
         metadata={"help": "Where do you want to store the pretrained models"},
+    )
+    hidden_dropout_prob: float = field(
+        default=0.1,
+        metadata={"help": "dropout probability in hidden encoders"}
+    )
+    attention_probs_dropout_prob: float = field(
+        default=0.1,
+        metadata={"help": "dropout probability in attentions"}
     )
 
 

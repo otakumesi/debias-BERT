@@ -26,7 +26,7 @@ API_KEY = os.getenv("COMET_API_KEY")
 WORKSPACE = os.getenv("COMET_WORKSPACE")
 PROJECT_NAME = os.getenv("COMET_PROJECT_NAME")
 
-# experiment = Experiment(api_key=API_KEY, workspace=WORKSPACE, project_name=PROJECT_NAME)
+experiment = Experiment(api_key=API_KEY, workspace=WORKSPACE, project_name=PROJECT_NAME)
 
 DATASET_PATH = Path("data") / "crows_pairs_anonymized.csv"
 
@@ -36,16 +36,20 @@ def train(model_args, data_args, train_args):
     np.random.seed(train_args.seed)
     torch.manual_seed(train_args.seed)
 
-    dataset = load_dataset("csv", data_files=str(DATASET_PATH), split="train")
-
     # Load Transformers config
     if model_args.config_name:
         config = AutoConfig.from_pretrained(
-            model_args.config_name, cache_dir=model_args.cache_dir
+            model_args.config_name,
+            cache_dir=model_args.cache_dir,
+            hidden_dropout_prob=model_args.hidden_dropout_prob,
+            attention_probs_dropout_prob=model_args.attention_probs_dropout_prob
         )
     else:
         config = AutoConfig.from_pretrained(
-            model_args.model_name_or_path, cache_dir=model_args.cache_dir
+            model_args.model_name_or_path,
+            cache_dir=model_args.cache_dir,
+            hidden_dropout_prob=model_args.hidden_dropout_prob,
+            attention_probs_dropout_prob=model_args.attention_probs_dropout_prob
         )
 
     # Load Transformers Tokenizer
@@ -99,7 +103,7 @@ def train(model_args, data_args, train_args):
             more_diff = MAX_LEN - more_len
             more_mask.scatter_(0, torch.LongTensor(range(more_len, more_len + more_diff)), 0)
             more_result.extend([MAX_LEN - 1] * more_diff)
-            
+
         less_mask = torch.ones(MAX_LEN, dtype=torch.int64)
         less_len = len(less_result)
         if less_len < MAX_LEN:
@@ -114,14 +118,8 @@ def train(model_args, data_args, train_args):
 
     dataset = dataset.map(get_indices)
 
-    # dataset = dataset.filter(lambda ex: len([i for i in ex["more_input_ids"] if i != 0]) == len([i for i in  ex["less_input_ids"] if i != 0]))
-
-    # dataset = dataset.map(
-    #     lambda ex: {"unmodified_mask": [m == l for m, l in zip(ex["more_input_ids"], ex["less_input_ids"])]}
-    # )
-
     orig_columns = ["input_ids", "token_type_ids", "attention_mask", "indices", "mask"]
-    columns = [f"more_{c}" for c in orig_columns] + [f"less_{c}" for c in orig_columns] # + ["unmodified_mask"]
+    columns = [f"more_{c}" for c in orig_columns] + [f"less_{c}" for c in orig_columns]
     dataset.set_format(type="torch", columns=columns)
 
     no_decay = ["bias", "LayerNorm.weight"]
@@ -145,13 +143,13 @@ def train(model_args, data_args, train_args):
     ]
 
     optimizer = SGD(optimizer_grouped_parameters, lr=train_args.learning_rate)
-    lr_scheduler = get_constant_schedule(optimizer)
+    # lr_scheduler = get_constant_schedule(optimizer)
 
     trainer = Trainer(
-        model=debiaser,
+        model=model,
         args=train_args,
         train_dataset=dataset,
-        optimizers=(optimizer, lr_scheduler),
+        optimizers=(optimizer, None),
     )
 
     trainer.train()
