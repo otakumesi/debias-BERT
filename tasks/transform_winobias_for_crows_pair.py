@@ -23,7 +23,6 @@ def transform_dataset():
         anti_dataset = [anti_sent.strip().replace("[", "").replace("]", "") for anti_sent in anti_dataset]
         pro_dataset = [pro_sent.strip().replace("[", "").replace("]", "") for pro_sent in pro_dataset]
 
-
         with open(f'data/winobias_{name}.csv', 'w') as f:
             writer = csv.writer(f)
             writer.writerow(['', 'sent_more', 'sent_less', 'stereo_antistereo'])
