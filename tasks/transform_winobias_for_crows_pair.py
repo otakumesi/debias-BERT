@@ -25,10 +25,10 @@ def transform_dataset():
 
         with open(f'data/winobias_{name}.csv', 'w') as f:
             writer = csv.writer(f)
-            writer.writerow(['', 'sent_more', 'sent_less', 'stereo_antistereo'])
+            writer.writerow(['', 'sent_more', 'sent_less', 'stereo_antistereo', 'bias_type'])
 
             for i, (anti_sent, pro_sent) in enumerate(zip(anti_dataset, pro_dataset)):
-                writer.writerow([str(i), anti_sent, pro_sent, 'stereo'])
+                writer.writerow([str(i), anti_sent, pro_sent, 'stereo', 'gender'])
 
 
 if __name__ == '__main__':
