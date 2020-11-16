@@ -90,7 +90,7 @@ def train(model_args, data_args, train_args):
 
     dataset = dataset.map(
         lambda ex: {
-            f"more_{k}": v
+            f"more_{k}": v if not v == tokenizer.unk_token_id else tokenizer.mask_token_id
             for k, v in tokenizer(
                 ex["sent_more"], max_length=MAX_LEN, padding="max_length"
             ).items()
@@ -98,7 +98,7 @@ def train(model_args, data_args, train_args):
     )
     dataset = dataset.map(
         lambda ex: {
-            f"less_{k}": v
+            f"less_{k}": v if not v == tokenizer.unk_token_id else tokenizer.mask_token_id
             for k, v in tokenizer(
                 ex["sent_less"], max_length=MAX_LEN, padding="max_length"
             ).items()
