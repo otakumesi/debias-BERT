@@ -1,28 +1,43 @@
 from pathlib import Path
+import re
+import csv
 
-import pandas as pd
-from datasets import Dataset
+import spacy
 
-DATA_DIR = Path('data') / 'us_names'
+from datasets import load_dataset
+
+MASK_NAMES_PATH = Path('data') / 'masking_names.txt'
 CROWS_DATASET_PATH = Path("data") / "crows_pairs_anonymized.csv"
+MASKED_CROWS_DATASET_PATH = Path("data") / "masked_crows_pairs_anonymized.csv"
+
+nlp = spacy.load("en_core_web_lg")
 
 
 def transform():
-   dfs = [pd.read_csv(path, names=['Name', 'Gender', 'Occurrences']) for path in DATA_DIR.glob('yob*.txt')]
+    dataset = load_dataset("csv", data_files=str(CROWS_DATASET_PATH), split="train")
 
-   df_names = pd.concat(dfs, axis=0, ignore_index=True).drop('Gender', axis=1).drop('Occurrences', axis=1)
-   df_names = df_names[~df_names.duplicated(subset='Name')]
+    with open(MASK_NAMES_PATH, 'r') as f:
+       names = [line.strip() for line in f.readlines()]
 
-   dataset = load_dataset("csv", data_files=str(CROWS_DATASET_PATH), split="train")
+    def mask_sent_names(example):
+        sent_more = example['sent_more']
+        sent_less = example['sent_less']
 
-   def replace_name_to_mask(example):
-      sent_more = example['sent_more']
-      sent_less = example['sent_less']
+        for name in names:
+            if name in sent_more:
+                sent_more = re.sub(f"{name}(\s|'s)", '[MASK]\\1', sent_more)
+            if name in sent_less:
+                sent_less = re.sub(f"{name}(\s|'s)", '[MASK]\\1', sent_less)
 
-      # TODO: masking names
+        return {'sent_more': sent_more, 'sent_less': sent_less}
 
 
-   dataset.map(lambda ex: ex['sentence'])
+    dataset = dataset.map(mask_sent_names)
+
+    with open(MASKED_CROWS_DATASET_PATH, 'w') as f:
+        writer = csv.writer(f)
+
+    import ipdb; ipdb.set_trace()
 
 
 if __name__ == '__main__':
