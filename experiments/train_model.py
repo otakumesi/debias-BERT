@@ -87,6 +87,12 @@ def train(model_args, data_args, train_args):
 
     MAX_LEN = 50
     dataset = load_dataset("csv", data_files=str(DATASET_PATH), split="train")
+    dataset = dataset.filter(lambda ex: ex["bias_type"] != "religion")
+    dataset = dataset.filter(lambda ex: ex["bias_type"] != "age")
+    dataset = dataset.filter(lambda ex: ex["bias_type"] != "sexual-orientation")
+    dataset = dataset.filter(lambda ex: ex["bias_type"] != "physical-appearance")
+    dataset = dataset.filter(lambda ex: ex["bias_type"] != "disability")
+
 
     dataset = dataset.map(
         lambda ex: {

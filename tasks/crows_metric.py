@@ -165,6 +165,9 @@ def evaluate(args):
     # load data into panda DataFrame
     df_data = read_data(args.input_file)
 
+    if args.bias_type is not None:
+        df_data = df_data[df_data['bias_type'] == args.bias_type]
+
     # supported masked language models
     tokenizer = AutoTokenizer.from_pretrained(args.lm_model)
     model = AutoModelWithLMHead.from_pretrained(args.lm_model)
@@ -264,6 +267,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--input_file", type=str, help="path to input file")
 parser.add_argument("--lm_model", type=str, help="pretrained LM model to use (options: bert, roberta, albert)")
 parser.add_argument("--output_file", type=str, help="path to output file with sentence scores")
+parser.add_argument("--bias_type", type=str, help="bias_type", default=None)
+
 
 args = parser.parse_args()
 evaluate(args)
