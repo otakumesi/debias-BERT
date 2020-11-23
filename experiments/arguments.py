@@ -40,13 +40,13 @@ class ModelArguments:
     )
 
 
-
 @dataclass
 class DataArguments:
     dataset_path: str = field(default=None, metadata={"help": "Path to dataset"})
     dataset_length: Optional[int] = field(
         default=None, metadata={"help": "Number to use data on your task"}
     )
+    augment_data: bool = field(default=True, metadata={"help": "Flag of augmenting dataset"})
 
 
 @dataclass

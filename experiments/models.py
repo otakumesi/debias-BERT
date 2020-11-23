@@ -26,7 +26,6 @@ class SentencePertubationNormalizer(Module):
         less_indices: Tensor,
         less_mask: Tensor
     ):
-
         more_outputs = self.model(
             input_ids=more_input_ids,
             token_type_ids=more_token_type_ids,
@@ -57,13 +56,15 @@ class SentencePertubationNormalizer(Module):
         less_logits = less_logits * less_mask.unsqueeze(2)
 
         more_probs = torch.log_softmax(more_logits, dim=-1)
-        less_probs = torch.log_softmax(less_logits, dim=-1)
+        less_probs = torch.log_softmax(less_logits, dim=-1).detach()
 
-        m_probs = (torch.exp(more_probs) + torch.exp(less_probs)) * 0.5
-        js_div = 0.5 * (F.kl_div(more_probs, m_probs, reduction="none") + F.kl_div(less_probs, m_probs, reduction="none"))
+        # m_probs = (more_probs + less_probs) * 0.5
+        # js_div = 0.5 * (F.kl_div(more_probs, m_probs, log_target=True, reduction="none") + F.kl_div(less_probs, m_probs, log_target=True reduction="none"))
 
-        loss = js_div.sum(dim=(2, 1)).mean()
-        return (loss,)
+        # loss = js_div.sum(dim=(2, 1)).mean()
+        # return (loss,)
+        return (F.mse_loss(more_probs, less_probs),)
+        # return (F.kl_div(more_probs, less_probs, log_target=True, reduction='batchmean'),)
 
 
 class MLPHead(Module):

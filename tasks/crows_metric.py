@@ -254,7 +254,7 @@ def evaluate(args):
     df_score.to_csv(args.output_file)
     print('=' * 100)
     print('Total examples:', N)
-    print('Metric score:', round((stereo_score + antistereo_score) / N * 100, 2))
+    print('Metric score:', round((stereo_score + antistereo_score) / (N - neutral) * 100, 2))
     print('Stereotype score:', round(stereo_score  / total_stereo * 100, 2))
     if antistereo_score != 0:
         print('Anti-stereotype score:', round(antistereo_score  / total_antistereo * 100, 2))

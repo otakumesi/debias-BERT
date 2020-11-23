@@ -1,6 +1,5 @@
 from comet_ml import Experiment
 
-import os
 import logging
 import random
 from pathlib import Path
@@ -10,10 +9,9 @@ import numpy as np
 from datasets import load_dataset
 from transformers import AutoModelWithLMHead, AutoConfig, AutoTokenizer
 from transformers import HfArgumentParser
-from transformers import TrainingArguments, Trainer
+from transformers import TrainingArguments, Trainer, AdamW
 import torch
 from torch import nn
-from torch.optim import SGD
 from dotenv import load_dotenv
 
 from arguments import ModelArguments, DataArguments
@@ -24,12 +22,6 @@ from mixout import MixLinear
 ARGS_JSON_FILE = "args.json"
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
-
-API_KEY = os.getenv("COMET_API_KEY")
-WORKSPACE = os.getenv("COMET_WORKSPACE")
-PROJECT_NAME = os.getenv("COMET_PROJECT_NAME")
-
-experiment = Experiment(api_key=API_KEY, workspace=WORKSPACE, project_name=PROJECT_NAME)
 
 DATASET_PATH = Path("data") / "crows_pairs_anonymized.csv"
 
@@ -87,12 +79,32 @@ def train(model_args, data_args, train_args):
 
     MAX_LEN = 50
     dataset = load_dataset("csv", data_files=str(DATASET_PATH), split="train")
-    dataset = dataset.filter(lambda ex: ex["bias_type"] != "religion")
-    dataset = dataset.filter(lambda ex: ex["bias_type"] != "age")
-    dataset = dataset.filter(lambda ex: ex["bias_type"] != "sexual-orientation")
-    dataset = dataset.filter(lambda ex: ex["bias_type"] != "physical-appearance")
-    dataset = dataset.filter(lambda ex: ex["bias_type"] != "disability")
+    # dataset = dataset.filter(lambda ex: ex["bias_type"] != "religion")
+    # dataset = dataset.filter(lambda ex: ex["bias_type"] != "age")
+    # dataset = dataset.filter(lambda ex: ex["bias_type"] != "sexual-orientation")
+    # dataset = dataset.filter(lambda ex: ex["bias_type"] != "physical-appearance")
+    # dataset = dataset.filter(lambda ex: ex["bias_type"] != "disability")
 
+    def augment_dataset(exs):
+        sents_more = []
+        sents_less = []
+        stereo_antistereo_list = []
+        bias_types = []
+        for sent_more, sent_less, stereo_antistereo, bias_type in zip(exs["sent_more"], exs["sent_less"], exs["stereo_antistereo"], exs["bias_type"]):
+            sents_more.extend([sent_more, sent_less])
+            sents_less.extend([sent_less, sent_more])
+            stereo_antistereo_list.extend([stereo_antistereo] * 2)
+            bias_types.extend([bias_type] * 2)
+
+        return {
+            "sent_more": sents_more,
+            "sent_less": sents_less,
+            "stereo_antistereo": stereo_antistereo_list,
+            "bias_type": bias_types
+        }
+
+    if data_args.augment_data == True:
+        dataset = dataset.map(augment_dataset, remove_columns=['', 'annotations', 'anon_writer', 'anon_annotators'], batched=True)
 
     dataset = dataset.map(
         lambda ex: {
@@ -168,8 +180,7 @@ def train(model_args, data_args, train_args):
         },
     ]
 
-    optimizer = SGD(optimizer_grouped_parameters, lr=train_args.learning_rate)
-    # lr_scheduler = get_constant_schedule(optimizer)
+    optimizer = AdamW(optimizer_grouped_parameters, lr=train_args.learning_rate)
 
     trainer = Trainer(
         model=model,
