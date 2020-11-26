@@ -16,7 +16,7 @@ from arguments import ModelArguments, GenderedSentimentDataArguments
 
 ARGS_JSON_FILE = "args_gendered_sent.json"
 logging.basicConfig(level=logging.INFO)
-load_dot_env
+load_dotenv()
 
 
 def run():
@@ -49,7 +49,7 @@ def run():
             model_args.model_name_or_path, cache_dir=model_args.cache_dir, use_fast=True
         )
 
-    train_set, valid_set = load_dataset(
+    train_set, eval_set = load_dataset(
         "glue", "sst2", split=["train", "validation"]
     )
     test_set = load_dataset(
@@ -61,7 +61,7 @@ def run():
         return tokenizer(examples["sentence"], padding="max_length", max_length=data_args.max_seq_length, truncation=True)
 
     train_set = train_set.map(preprocess, batched=True)
-    valid_set = valid_set.map(preprocess, batched=True)
+    eval_set = eval_set.map(preprocess, batched=True)
     test_set = test_set.map(preprocess, batched=True)
 
 
@@ -73,7 +73,7 @@ def run():
     ]
 
     train_set.set_format(type="torch", columns=columns)
-    valid_set.set_format(type="torch", columns=columns)
+    eval_set.set_format(type="torch", columns=columns)
     test_set.set_format(type="torch", columns=columns[:-1])
 
 
@@ -93,17 +93,28 @@ def run():
         args=train_args,
         tokenizer=tokenizer,
         train_dataset=train_set,
-        eval_dataset=valid_set,
+        eval_dataset=eval_set,
         compute_metrics=compute_metrics
     )
 
     if train_args.do_train:
         trainer.train(model_path=model_args.model_name_or_path)
-        trainer.save_model()
+        trainer.save_model(train_args.logging_dir)
+
+    system_output_dir = Path('runs') / 'models' / model_args.model_name_or_path / \
+            f"epoch_{train_args.epoch}_lr_{train_args.learning_rate}"
+    system_output_dir.mkdir(parents=True, exist_ok=True)
+
+    if train_args.do_eval:
+        if data_args.task_name == "mnli":
+            eval_result = trainer.evaluate(eval_dataset=eval_set)
+            output_eval_file = system_output_dir / "eval_results.txt"
+            if trainer.is_world_process_zero():
+                with open(output_eval_file, "w") as writer:
+                    for key, value in eval_result.items():
+                        writer.write(f"{key} = {value}\n")
 
     if train_args.do_predict:
-        system_output_dir = Path('runs') / 'models' / model_args.model_name_or_path
-        system_output_dir.mkdir(parents=True, exist_ok=True)
         system_output = system_output_dir / "gendered_sent_predicts.tsv"
 
         preds = trainer.predict(test_dataset=test_set).predictions
