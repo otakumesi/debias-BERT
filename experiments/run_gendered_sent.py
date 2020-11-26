@@ -1,4 +1,4 @@
-# from comet_ml import Experiment
+from comet_ml import Experiment
 
 import csv
 import logging
@@ -10,11 +10,13 @@ from transformers import HfArgumentParser, TrainingArguments, Trainer
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
 import torch
 from datasets import load_dataset, load_metric
+from dotenv import load_dotenv
 
 from arguments import ModelArguments, GenderedSentimentDataArguments
 
 ARGS_JSON_FILE = "args_gendered_sent.json"
 logging.basicConfig(level=logging.INFO)
+load_dot_env
 
 
 def run():
@@ -48,10 +50,10 @@ def run():
         )
 
     train_set, valid_set = load_dataset(
-        "glue", "sst2", split=["train[:10]", "validation[:10]"]
+        "glue", "sst2", split=["train", "validation"]
     )
     test_set = load_dataset(
-        "csv", "sst2", data_files="data/gendered-sentiment/test.tsv", delimiter="\t", split="train[:10]"
+        "csv", "sst2", data_files="data/gendered-sentiment/test.tsv", delimiter="\t", split="train"
     )
     metric = load_metric("glue", "sst2")
 
@@ -100,7 +102,10 @@ def run():
         trainer.save_model()
 
     if train_args.do_predict:
-        system_output = Path(train_args.logging_dir) / "gendered_sent_predicts.tsv"
+        system_output_dir = Path('runs') / 'models' / model_args.model_name_or_path
+        system_output_dir.mkdir(parents=True, exist_ok=True)
+        system_output = system_output_dir / "gendered_sent_predicts.tsv"
+
         preds = trainer.predict(test_dataset=test_set).predictions
         preds = np.squeeze(preds)
 
