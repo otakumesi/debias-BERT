@@ -50,6 +50,23 @@ class DataArguments:
 
 
 @dataclass
+class GenderedSentimentDataArguments:
+    max_seq_length: int = field(
+        default=128,
+        metadata={
+            "help": "The maximum total input sequence length after tokenization. Sequences longer "
+            "than this will be truncated, sequences shorter will be padded."
+        },
+    )
+    pad_to_max_length: bool = field(
+        default=True,
+        metadata={
+            "help": "Whether to pad all samples to `max_seq_length`. "
+            "If False, will pad the samples dynamically when batching to the maximum length in the batch."
+        },
+    )
+
+@dataclass
 class MyTrainingArguments:
     seed: int = field(default=42, metadata={"help": "Initialized random seed number"})
     train_batch_size: int = field(
