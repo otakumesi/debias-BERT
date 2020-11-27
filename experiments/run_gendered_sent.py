@@ -50,10 +50,10 @@ def run():
         )
 
     train_set, eval_set = load_dataset(
-        "glue", "sst2", split=["train[:10]", "validation[:10]"]
+        "glue", "sst2", split=["train", "validation"]
     )
     test_set = load_dataset(
-        "csv", "sst2", data_files="data/gendered-sentiment/test.tsv", delimiter="\t", split="train[:10]"
+        "csv", "sst2", data_files="data/gendered-sentiment/test.tsv", delimiter="\t", split="train"
     )
     metric = load_metric("glue", "sst2")
 
