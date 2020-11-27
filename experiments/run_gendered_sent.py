@@ -102,17 +102,16 @@ def run():
         trainer.save_model(train_args.logging_dir)
 
     system_output_dir = Path('runs') / 'models' / model_args.model_name_or_path / \
-            f"epoch_{train_args.epoch}_lr_{train_args.learning_rate}_batch_{train_args.per_device_train_batch_size}"
+            f"epoch_{train_args.num_train_epoch}_lr_{train_args.learning_rate}_batch_{train_args.per_device_train_batch_size}"
     system_output_dir.mkdir(parents=True, exist_ok=True)
 
     if train_args.do_eval:
-        if data_args.task_name == "mnli":
-            eval_result = trainer.evaluate(eval_dataset=eval_set)
-            output_eval_file = system_output_dir / "eval_results.txt"
-            if trainer.is_world_process_zero():
-                with open(output_eval_file, "w") as writer:
-                    for key, value in eval_result.items():
-                        writer.write(f"{key} = {value}\n")
+        eval_result = trainer.evaluate(eval_dataset=eval_set)
+        output_eval_file = system_output_dir / "eval_results.txt"
+        if trainer.is_world_process_zero():
+            with open(output_eval_file, "w") as writer:
+                for key, value in eval_result.items():
+                    writer.write(f"{key} = {value}\n")
 
     if train_args.do_predict:
         system_output = system_output_dir / "gendered_sent_predicts.tsv"
