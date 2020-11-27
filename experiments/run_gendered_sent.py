@@ -86,8 +86,8 @@ def run():
         trainer.save_model(train_args.logging_dir)
 
     system_output_dir = Path('runs')
-    system_output_dir += model_args.model_name_or_path if model_args.model_name_or_path.startswith('models/') else 'models' / model_args.model_name_or_path
-    system_output_dir += f"epoch_{train_args.num_train_epochs}_lr_{train_args.learning_rate}_batch_{train_args.per_device_train_batch_size}"
+    system_output_dir /= model_args.model_name_or_path if model_args.model_name_or_path.startswith('models/') else 'models' / model_args.model_name_or_path
+    system_output_dir /= f"epoch_{train_args.num_train_epochs}_lr_{train_args.learning_rate}_batch_{train_args.per_device_train_batch_size}"
 
     system_output_dir.mkdir(parents=True, exist_ok=True)
 
