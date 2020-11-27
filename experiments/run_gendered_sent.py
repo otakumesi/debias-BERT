@@ -6,7 +6,7 @@ import random
 from pathlib import Path
 
 import numpy as np
-from transformers import HfArgumentParser, TrainingArguments, Trainer
+from transformers import HfArgumentParser, TrainingArguments, Trainer, default_data_collator, set_seed
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
 import torch
 from datasets import load_dataset, load_metric
@@ -25,9 +25,7 @@ def run():
     )
     model_args, data_args, train_args = parser.parse_json_file(ARGS_JSON_FILE)
 
-    random.seed(train_args.seed)
-    np.random.seed(train_args.seed)
-    torch.manual_seed(train_args.seed)
+    set_seed(train_args.seed)
 
     # Load Transformers config
     if model_args.config_name:
@@ -70,6 +68,10 @@ def run():
         preds = np.argmax(preds, axis=1)
 
         result = metric.compute(predictions=preds, references=p.label_ids)
+
+        if len(result) > 1:
+            result["combined_score"] = np.mean(list(result.values())).item()
+
         return result
 
     trainer = Trainer(
@@ -78,7 +80,8 @@ def run():
         tokenizer=tokenizer,
         train_dataset=train_set,
         eval_dataset=eval_set,
-        compute_metrics=compute_metrics
+        compute_metrics=compute_metrics,
+        data_collator=default_data_collator
     )
 
     if train_args.do_train:

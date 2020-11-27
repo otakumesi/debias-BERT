@@ -18,7 +18,6 @@ from arguments import ModelArguments, DataArguments
 from models import SentencePertubationNormalizer
 from mixout import MixLinear
 
-
 ARGS_JSON_FILE = "args.json"
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
