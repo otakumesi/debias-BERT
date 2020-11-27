@@ -50,32 +50,16 @@ def run():
         )
 
     train_set, eval_set = load_dataset(
-        "glue", "sst2", split=["train", "validation"]
+        "glue", "sst2", split=["train[:10]", "validation[:10]"]
     )
     test_set = load_dataset(
-        "csv", "sst2", data_files="data/gendered-sentiment/test.tsv", delimiter="\t", split="train"
+        "csv", "sst2", data_files="data/gendered-sentiment/test.tsv", delimiter="\t", split="train[:10]"
     )
     metric = load_metric("glue", "sst2")
 
-    def preprocess(examples):
-        return tokenizer(examples["sentence"], padding="max_length", max_length=data_args.max_seq_length, truncation=True)
-
-    train_set = train_set.map(preprocess, batched=True)
-    eval_set = eval_set.map(preprocess, batched=True)
-    test_set = test_set.map(preprocess, batched=True)
-
-
-    columns = [
-        "input_ids",
-        "attention_mask",
-        "token_type_ids",
-        "label"
-    ]
-
-    train_set.set_format(type="torch", columns=columns)
-    eval_set.set_format(type="torch", columns=columns)
-    test_set.set_format(type="torch", columns=columns[:-1])
-
+    train_set = train_set.map(lambda ex: tokenizer(ex["sentence"], padding="max_length", max_length=data_args.max_seq_length, truncation=True), batched=True)
+    eval_set = eval_set.map(lambda ex: tokenizer(ex["sentence"], padding="max_length", max_length=data_args.max_seq_length, truncation=True), batched=True)
+    test_set = test_set.map(lambda ex: tokenizer(ex["sentence"], padding="max_length", max_length=data_args.max_seq_length, truncation=True), batched=True)
 
     model = AutoModelForSequenceClassification.from_pretrained(
         model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir
@@ -83,7 +67,7 @@ def run():
 
     def compute_metrics(p):
         preds = p.predictions
-        preds = np.argmax(preds)
+        preds = np.argmax(preds, axis=1)
 
         result = metric.compute(predictions=preds, references=p.label_ids)
         return result

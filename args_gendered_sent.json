@@ -11,5 +11,6 @@
   "save_steps": 1000,
   "logging_steps": 300,
   "do_train": true,
+  "do_eval": true,
   "do_predict": true
 }
