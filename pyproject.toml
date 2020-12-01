@@ -27,6 +27,7 @@ allennlp = "1.2.1"
 allennlp-models = "^1.2.0"
 geomloss = "^0.2.3"
 spacy = "^2.3.2"
+scikit-learn = "^0.23.2"
 
 [tool.poetry.dev-dependencies]
 python-language-server = "^0.35.1"

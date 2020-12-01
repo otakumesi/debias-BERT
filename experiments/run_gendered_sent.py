@@ -12,7 +12,7 @@ import torch
 from datasets import load_dataset, load_metric
 from dotenv import load_dotenv
 
-from arguments import ModelArguments, GenderedSentimentDataArguments
+from arguments import ModelArguments, SeqClassificationDataArguments
 
 ARGS_JSON_FILE = "args_gendered_sent.json"
 logging.basicConfig(level=logging.INFO)
@@ -21,7 +21,7 @@ load_dotenv()
 
 def run():
     parser = HfArgumentParser(
-        (ModelArguments, GenderedSentimentDataArguments, TrainingArguments)
+        (ModelArguments, SeqClassificationDataArguments, TrainingArguments)
     )
     model_args, data_args, train_args = parser.parse_json_file(ARGS_JSON_FILE)
 

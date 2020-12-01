@@ -50,7 +50,7 @@ class DataArguments:
 
 
 @dataclass
-class GenderedSentimentDataArguments:
+class SeqClassificationDataArguments:
     max_seq_length: int = field(
         default=128,
         metadata={
