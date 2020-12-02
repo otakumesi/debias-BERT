@@ -71,9 +71,12 @@ def run():
 
         acc = metrics.accuracy_score(p.label_ids, preds >= 0.5)
 
-        fpr, tpr, thresholds = metrics.roc_curve(p.label_ids, preds)
-        auc = metrics.auc(fpr, tpr)
-        results = {"auc": auc, "accuracy": acc}
+        (tn, fp, fn, tp) = metrics.confusion_matrix(label_ids, preds >=0.5).ravel()
+        fpr = fp / (fp + tn)
+        fnr = fn / (tn + fn)
+        auc = metrics.roc_auc_score(label_ids, preds)
+
+        results = {"auc": auc, "accuracy": acc, "false_positive_rate": fpr, "false_negative_rate": fnr}
 
         return results
 
@@ -87,15 +90,16 @@ def run():
         data_collator=default_data_collator
     )
 
-    if train_args.do_train:
-        trainer.train(model_path=model_args.model_name_or_path)
-        trainer.save_model(train_args.logging_dir)
-
     system_output_dir = Path('runs') / "wiki_toxicity"
     system_output_dir /= model_args.model_name_or_path if model_args.model_name_or_path.startswith("models/") else f"models/{model_args.model_name_or_path}"
     system_output_dir /= f"epoch_{train_args.num_train_epochs}_lr_{train_args.learning_rate}_batch_{train_args.per_device_train_batch_size}_max_seq_len_{data_args.max_seq_length}"
 
     system_output_dir.mkdir(parents=True, exist_ok=True)
+
+    if train_args.do_train:
+        trainer.train(model_path=model_args.model_name_or_path)
+        trainer.save_model(system_output_dir)
+
 
     if train_args.do_eval:
         eval_metrics = trainer.evaluate(eval_dataset=valid_set)
