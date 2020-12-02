@@ -1,14 +1,10 @@
-from comet_ml import Experiment
-
 import csv
 import logging
-import random
 from pathlib import Path
 
 import numpy as np
 from transformers import HfArgumentParser, TrainingArguments, Trainer, default_data_collator, set_seed
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
-import torch
 from datasets import load_dataset, load_metric
 from dotenv import load_dotenv
 

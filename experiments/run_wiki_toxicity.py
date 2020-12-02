@@ -1,13 +1,9 @@
-from comet_ml import Experiment
-
 import csv
 import logging
-import random
 from pathlib import Path
 
 import numpy as np
-import torch
-import torch.nn.functional as F
+from scipy.special import softmax
 from transformers import HfArgumentParser, TrainingArguments, Trainer, default_data_collator, set_seed
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
 from sklearn import metrics
@@ -32,11 +28,11 @@ def run():
     # Load Transformers config
     if model_args.config_name:
         config = AutoConfig.from_pretrained(
-            model_args.config_name, cache_dir=model_args.cache_dir, num_labels=1
+            model_args.config_name, cache_dir=model_args.cache_dir, num_labels=2
         )
     else:
         config = AutoConfig.from_pretrained(
-            model_args.model_name_or_path, cache_dir=model_args.cache_dir, num_labels=1
+            model_args.model_name_or_path, cache_dir=model_args.cache_dir, num_labels=2
         )
 
     # Load Transformers Tokenizer
@@ -58,7 +54,7 @@ def run():
     def preprocess(dataset):
         dataset = dataset.map(lambda ex: tokenizer(ex["comment"], padding="max_length", max_length=data_args.max_seq_length, truncation=True), batched=True)
         dataset = dataset.map(lambda ex: {"toxicity": ex["toxicity"] if ex["toxicity"] is not None else 0.0})
-        dataset = dataset.map(lambda ex: {"label": float(ex["is_toxic"])})
+        dataset = dataset.map(lambda ex: {"label": ex["is_toxic"]})
         return dataset
 
     train_set = preprocess(train_set)
@@ -70,13 +66,15 @@ def run():
     )
 
     def compute_metrics(p):
-        preds = p.predictions
-        preds = np.argmax(preds, axis=1)
+        # take account of only positive probs.
+        preds = softmax(p.predictions, axis=-1)[:, 1]
 
-        print(p.label_ids)
-        fpr, tpr, thresholds = metrics.roc_curve(p.label_ids, preds, pos_label=1)
+        acc = metrics.accuracy_score(p.label_ids, preds >= 0.5)
+
+        fpr, tpr, thresholds = metrics.roc_curve(p.label_ids, preds)
         auc = metrics.auc(fpr, tpr)
-        results = {"auc": auc, "false_positive_rate": fpr, "true_positive_rate": tpr, "thresholds": thresholds}
+        results = {"auc": auc, "accuracy": acc}
+
         return results
 
     trainer = Trainer(
@@ -109,12 +107,12 @@ def run():
 
     if train_args.do_predict:
         output_test_preds_file = system_output_dir / "test_toxicity_predictions.tsv"
-        output_test_metrics_file = system_output_dir / "eval_results.txt"
+        output_test_metrics_file = system_output_dir / "test_results.txt"
 
         result = trainer.predict(test_dataset=test_set)
 
         test_metrics = result.metrics
-        test_preds = np.squeeze(result.predictions)
+        test_preds = softmax(result.predictions, axis=-1)[:, 1]
 
         if trainer.is_world_process_zero():
             with open(output_test_metrics_file, "w") as writer:
@@ -123,11 +121,11 @@ def run():
 
             with open(output_test_preds_file, "w") as f:
                 writer = csv.writer(f, delimiter="\t", quoting=csv.QUOTE_MINIMAL)
-                writer.writerow(["index", "toxicity"])
+                writer.writerow(["index", "score", "toxicity"])
 
-                for index, toxicity in enumerate(test_preds):
+                for index, score in enumerate(test_preds):
 
-                    writer.writerow([index, toxicity])
+                    writer.writerow([index, score, score >= 0.5])
 
 
 if __name__ == "__main__":
