@@ -65,6 +65,10 @@ class SeqClassificationDataArguments:
             "If False, will pad the samples dynamically when batching to the maximum length in the batch."
         },
     )
+    is_debias: bool = field(
+        default=False,
+        metadata={"help": "Whether to use debiased dataset"}
+    )
 
 @dataclass
 class MyTrainingArguments:

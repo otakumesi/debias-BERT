@@ -45,10 +45,12 @@ def run():
             model_args.model_name_or_path, cache_dir=model_args.cache_dir, use_fast=True
         )
 
+    
+    dataset_key = "debias_" if data_args.is_debias else ""
     train_set, valid_set, test_set  = load_dataset("csv",
-                                                   data_files={"train": "data/wiki_toxicity/wiki_debias_train.csv",
-                                                               "validation": "data/wiki_toxicity/wiki_debias_dev.csv",
-                                                               "test": "data/wiki_toxicity/wiki_debias_test.csv"},
+                                                   data_files={"train": f"data/wiki_toxicity/wiki_{dataset_key}train.csv",
+                                                               "validation": f"data/wiki_toxicity/wiki_{dataset_key}dev.csv",
+                                                               "test": f"data/wiki_toxicity/wiki_{dataset_key}test.csv"},
                                                    split=["train", "validation", "test"])
 
     def preprocess(dataset):
@@ -92,7 +94,10 @@ def run():
 
     system_output_dir = Path('runs') / "wiki_toxicity"
     system_output_dir /= model_args.model_name_or_path if model_args.model_name_or_path.startswith("models/") else f"models/{model_args.model_name_or_path}"
-    system_output_dir /= f"epoch_{train_args.num_train_epochs}_lr_{train_args.learning_rate}_batch_{train_args.per_device_train_batch_size}_max_seq_len_{data_args.max_seq_length}"
+    output_file_name = f"epoch_{train_args.num_train_epochs}_lr_{train_args.learning_rate}_batch_{train_args.per_device_train_batch_size}_max_seq_len_{data_args.max_seq_length}"
+    if data_args.is_debias:
+        output_file_name += "_debiased"
+    system_output_dir /= output_file_name
 
     system_output_dir.mkdir(parents=True, exist_ok=True)
 

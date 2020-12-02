@@ -1,0 +1,13 @@
+{
+  "model_name_or_path": "runs/wiki_toxicity/models/more_loss_mse-epoch-70_aug_data/epoch_3_lr_2e-05_batch_8_max_seq_len_128/model",
+  "seed": 42,
+  "output_dir": "runs",
+  "per_device_train_batch_size": 8,
+  "weight_decay": 0.0,
+  "max_grad_norm": 1,
+  "num_train_epochs": 1,
+  "eval_steps": 1000,
+  "save_steps": 1000,
+  "logging_steps": 300,
+  "do_predict": true
+}
