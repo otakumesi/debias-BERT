@@ -50,7 +50,7 @@ def run():
                                                    data_files={"train": f"data/wiki_toxicity/wiki_{dataset_key}train.csv",
                                                                "validation": f"data/wiki_toxicity/wiki_{dataset_key}dev.csv",
                                                                "test": f"data/wiki_toxicity/wiki_{dataset_key}test.csv"},
-                                                   split=["train[:20]", "validation[:200]", "test[:200]"])
+                                                   split=["train", "validation", "test"])
 
     def preprocess(dataset):
         dataset = dataset.map(lambda ex: tokenizer(ex["comment"], padding="max_length", max_length=data_args.max_seq_length, truncation=True), batched=True)
