@@ -45,13 +45,12 @@ def run():
             model_args.model_name_or_path, cache_dir=model_args.cache_dir, use_fast=True
         )
 
-    
     dataset_key = "debias_" if data_args.is_debias else ""
     train_set, valid_set, test_set  = load_dataset("csv",
                                                    data_files={"train": f"data/wiki_toxicity/wiki_{dataset_key}train.csv",
                                                                "validation": f"data/wiki_toxicity/wiki_{dataset_key}dev.csv",
                                                                "test": f"data/wiki_toxicity/wiki_{dataset_key}test.csv"},
-                                                   split=["train", "validation", "test"])
+                                                   split=["train[:20]", "validation[:200]", "test[:200]"])
 
     def preprocess(dataset):
         dataset = dataset.map(lambda ex: tokenizer(ex["comment"], padding="max_length", max_length=data_args.max_seq_length, truncation=True), batched=True)
@@ -73,10 +72,10 @@ def run():
 
         acc = metrics.accuracy_score(p.label_ids, preds >= 0.5)
 
-        (tn, fp, fn, tp) = metrics.confusion_matrix(label_ids, preds >=0.5).ravel()
+        (tn, fp, fn, tp) = metrics.confusion_matrix(p.label_ids, preds >=0.5, labels=[0, 1]).ravel()
         fpr = fp / (fp + tn)
         fnr = fn / (tn + fn)
-        auc = metrics.roc_auc_score(label_ids, preds)
+        auc = metrics.roc_auc_score(p.label_ids, preds, labels=[0, 1])
 
         results = {"auc": auc, "accuracy": acc, "false_positive_rate": fpr, "false_negative_rate": fnr}
 
@@ -103,8 +102,7 @@ def run():
 
     if train_args.do_train:
         trainer.train(model_path=model_args.model_name_or_path)
-        trainer.save_model(system_output_dir)
-
+        trainer.save_model(str(system_output_dir / 'model'))
 
     if train_args.do_eval:
         eval_metrics = trainer.evaluate(eval_dataset=valid_set)

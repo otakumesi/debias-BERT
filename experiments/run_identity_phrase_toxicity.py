@@ -111,6 +111,8 @@ def run():
         result_metrics = {"pinned_auc": 0, "false_positive_equality_diff": 0, "false_negative_equality_diff": 0}
         for term in terms:
             sub_df = df[df["subgroup"] == term]
+            if len(sub_df) == 0:
+                continue
             non_sub_df = df[df["subgroup"] != term].sample(len(sub_df), random_state=train_args.seed)
             pinned_df = pd.concat([sub_df, non_sub_df])
             (auc, fpr, fnr) = compute_primitive_metrics(sub_df["labels"], sub_df["preds"])
