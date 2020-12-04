@@ -18,7 +18,7 @@ from arguments import ModelArguments, DataArguments
 from models import SentencePertubationNormalizer
 from mixout import MixLinear
 
-ARGS_JSON_FILE = "args.json"
+ARGS_JSON_FILE = "args_train_model.json"
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
@@ -78,11 +78,6 @@ def train(model_args, data_args, train_args):
 
     MAX_LEN = 50
     dataset = load_dataset("csv", data_files=str(DATASET_PATH), split="train")
-    # dataset = dataset.filter(lambda ex: ex["bias_type"] != "religion")
-    # dataset = dataset.filter(lambda ex: ex["bias_type"] != "age")
-    # dataset = dataset.filter(lambda ex: ex["bias_type"] != "sexual-orientation")
-    # dataset = dataset.filter(lambda ex: ex["bias_type"] != "physical-appearance")
-    # dataset = dataset.filter(lambda ex: ex["bias_type"] != "disability")
 
     def augment_dataset(exs):
         sents_more = []
@@ -107,7 +102,7 @@ def train(model_args, data_args, train_args):
 
     dataset = dataset.map(
         lambda ex: {
-            f"more_{k}": v if not v == tokenizer.unk_token_id else tokenizer.mask_token_id
+            f"more_{k}": v
             for k, v in tokenizer(
                 ex["sent_more"], max_length=MAX_LEN, padding="max_length"
             ).items()
@@ -115,7 +110,7 @@ def train(model_args, data_args, train_args):
     )
     dataset = dataset.map(
         lambda ex: {
-            f"less_{k}": v if not v == tokenizer.unk_token_id else tokenizer.mask_token_id
+            f"less_{k}": v
             for k, v in tokenizer(
                 ex["sent_less"], max_length=MAX_LEN, padding="max_length"
             ).items()
@@ -123,8 +118,8 @@ def train(model_args, data_args, train_args):
     )
 
     def get_indices(ex):
-        m_input_ids = [str(x) for x in ex["more_input_ids"]]
-        l_input_ids = [str(x) for x in ex["less_input_ids"]]
+        m_input_ids = [str(x) for x in ex["more_input_ids"][1:]]
+        l_input_ids = [str(x) for x in ex["less_input_ids"][1:]]
 
         matcher = difflib.SequenceMatcher(None, m_input_ids, l_input_ids)
         more_result, less_result = [], []
