@@ -1,4 +1,5 @@
 import csv
+from pathlib import Path
 import json
 import torch
 import argparse
@@ -196,13 +197,17 @@ def evaluate(args):
                                      'sent_more_score', 'sent_less_score',
                                      'score', 'stereo_antistereo', 'bias_type'])
 
-
     total_stereo, total_antistereo = 0, 0
     stereo_score, antistereo_score = 0, 0
 
     N = 0
     neutral = 0
     total = len(df_data.index)
+    score_diff_total = 0.
+
+    score_diff_stereo_total = 0.
+    score_diff_antistereo_total = 0.
+
     with tqdm(total=total) as pbar:
         for index, data in df_data.iterrows():
             direction = data['direction']
@@ -215,16 +220,19 @@ def evaluate(args):
             N += 1
             pair_score = 0
             pbar.update(1)
+            score_diff_total += abs(score['sent1_score'] - score['sent2_score'])
             if score['sent1_score'] == score['sent2_score']:
                 neutral += 1
             else:
                 if direction == 'stereo':
                     total_stereo += 1
+                    score_diff_stereo_total += abs(score['sent1_score'] - score['sent2_score'])
                     if score['sent1_score'] > score['sent2_score']:
                         stereo_score += 1
                         pair_score = 1
                 elif direction == 'antistereo':
                     total_antistereo += 1
+                    score_diff_antistereo_total += abs(score['sent1_score'] - score['sent2_score'])
                     if score['sent2_score'] > score['sent1_score']:
                         antistereo_score += 1
                         pair_score = 1
@@ -250,14 +258,19 @@ def evaluate(args):
                                         'bias_type': bias
                                       }, ignore_index=True)
 
-
-    df_score.to_csv(args.output_file)
+    dataset_file = f'{args.input_file}_{args.bias_type}' if args.bias_type else args.input_file
+    score_path = Path('runs/crows_pairs/') / dataset_file / args.lm_model
+    score_path.mkdir(exist_ok=True, parents=True)
+    df_score.to_csv(score_path / f'results.csv')
     print('=' * 100)
     print('Total examples:', N)
     print('Metric score:', round((stereo_score + antistereo_score) / (N - neutral) * 100, 2))
+    print('Bias Difference Score:', round(score_diff_total / N, 2))
     print('Stereotype score:', round(stereo_score  / total_stereo * 100, 2))
+    print('Bias Difference Score (Stereo):', round(score_diff_stereo_total / total_stereo, 2))
     if antistereo_score != 0:
         print('Anti-stereotype score:', round(antistereo_score  / total_antistereo * 100, 2))
+        print('Bias Difference Score (Antistereo):', round(score_diff_antistereo_total / total_antistereo, 2))
     print("Num. neutral:", neutral, round(neutral / N * 100, 2))
     print('=' * 100)
     print()
@@ -266,7 +279,6 @@ def evaluate(args):
 parser = argparse.ArgumentParser()
 parser.add_argument("--input_file", type=str, help="path to input file")
 parser.add_argument("--lm_model", type=str, help="pretrained LM model to use (options: bert, roberta, albert)")
-parser.add_argument("--output_file", type=str, help="path to output file with sentence scores")
 parser.add_argument("--bias_type", type=str, help="bias_type", default=None)
 
 
