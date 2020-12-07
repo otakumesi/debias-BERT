@@ -9,6 +9,7 @@ from datasets import load_dataset, load_metric
 from dotenv import load_dotenv
 
 from arguments import ModelArguments, SeqClassificationDataArguments
+from classifiers import BertForSequenceClassificationbyWholeLayer
 
 ARGS_JSON_FILE = "args_gendered_sent.json"
 logging.basicConfig(level=logging.INFO)
@@ -55,12 +56,15 @@ def run():
     eval_set = eval_set.map(lambda ex: tokenizer(ex["sentence"], padding="max_length", max_length=data_args.max_seq_length, truncation=True), batched=True)
     test_set = test_set.map(lambda ex: tokenizer(ex["sentence"], padding="max_length", max_length=data_args.max_seq_length, truncation=True), batched=True)
 
-    model = AutoModelForSequenceClassification.from_pretrained(
+    # model = AutoModelForSequenceClassification.from_pretrained(
+    #     model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir
+    # )
+    model = BertForSequenceClassificationbyWholeLayer.from_pretrained(
         model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir
     )
 
     def compute_metrics(p):
-        preds = p.predictions
+        preds = p.predictions[0]
         preds = np.argmax(preds, axis=1)
 
         result = metric.compute(predictions=preds, references=p.label_ids)
@@ -84,7 +88,7 @@ def run():
         trainer.train(model_path=model_args.model_name_or_path)
         trainer.save_model(train_args.logging_dir)
 
-    system_output_dir = Path('runs')
+    system_output_dir = Path('runs/gendered_sent')
     system_output_dir /= model_args.model_name_or_path if model_args.model_name_or_path.startswith('models/') else f"models/{model_args.model_name_or_path}"
     system_output_dir /= f"epoch_{train_args.num_train_epochs}_lr_{train_args.learning_rate}_batch_{train_args.per_device_train_batch_size}_max_seq_len_{data_args.max_seq_length}"
 
@@ -101,7 +105,7 @@ def run():
     if train_args.do_predict:
         system_output = system_output_dir / "gendered_sent_predicts.tsv"
 
-        preds = trainer.predict(test_dataset=test_set).predictions
+        preds = trainer.predict(test_dataset=test_set).predictions[0]
         preds = np.squeeze(preds)
 
         if trainer.is_world_process_zero():

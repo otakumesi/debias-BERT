@@ -1,7 +1,27 @@
+# coding=utf-8
+# Copyright 2018 The Google AI Language Team Authors and The HuggingFace Inc. team.
+# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import torch
 from torch import nn
+from torch.nn import CrossEntropyLoss, MSELoss
 from transformers import (
     BertModel,
-    BertPreTrainedModel,
+    BertPreTrainedModel
+)
+from transformers.modeling_outputs import (
     SequenceClassifierOutput
 )
 
@@ -26,8 +46,6 @@ class BertForSequenceClassificationbyWholeLayer(BertPreTrainedModel):
         inputs_embeds=None,
         labels=None,
     ):
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-
         outputs = self.bert(
             input_ids,
             attention_mask=attention_mask,
@@ -39,11 +57,10 @@ class BertForSequenceClassificationbyWholeLayer(BertPreTrainedModel):
             return_dict=True,
         )
 
-        hidden_states = torch.stack(outputs.hidden_states).permute(1, 0, 2, 3)
-        pooled_outputs = self.model.pooler(hidden_states)
+        hidden_states = outputs.hidden_states
+        pooled_outputs = torch.stack([self.bert.pooler(hidden_state) for hidden_state in hidden_states[1:]]).permute(1, 0, 2)
         pooled_outputs = self.dropout(pooled_outputs)
-
-        logits = self.classifier(pooled_outputs.view(-1))
+        logits = self.classifier(pooled_outputs.reshape(-1, self.config.hidden_size * self.config.num_hidden_layers))
 
         loss = None
         if labels is not None:
@@ -54,10 +71,6 @@ class BertForSequenceClassificationbyWholeLayer(BertPreTrainedModel):
             else:
                 loss_fct = CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-
-        if not return_dict:
-            output = (logits,) + outputs[2:]
-            return ((loss,) + output) if loss is not None else output
 
         return SequenceClassifierOutput(
             loss=loss,
