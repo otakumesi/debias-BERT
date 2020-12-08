@@ -1,4 +1,5 @@
 from typing import Optional
+import re
 
 import torch
 from torch import Tensor, LongTensor, BoolTensor
@@ -12,6 +13,7 @@ class SentencePertubationNormalizer(Module):
         super().__init__()
         self.model = model
         self.config = model.config
+        self.model_original_parameters = {k:v for k, v in self.model.state_dict().items() if re.search(r'\w+\.layer\.\d+\..+\.(weight|bias)', k)}
 
     def forward(
         self,
@@ -42,8 +44,8 @@ class SentencePertubationNormalizer(Module):
             return_dict=True,
         )
 
-        # more_logits = more_outputs.logits * more_attention_mask.unsqueeze(2)
-        # less_logits = less_outputs.logits * less_attention_mask.unsqueeze(2)
+        more_logits = more_outputs.logits * more_attention_mask.unsqueeze(2)
+        less_logits = less_outputs.logits * less_attention_mask.unsqueeze(2)
 
         vocab_size = self.model.config.vocab_size
 
@@ -62,7 +64,7 @@ class SentencePertubationNormalizer(Module):
 
         # more_attentions = more_attentions.where(more_attentions <= 0, more_attentions.log())
         # less_attentions = less_attentions.where(less_attentions <= 0, less_attentions.log())
-        
+
         more_logits_indices = more_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=vocab_size)
         more_logits = more_logits.gather(dim=1, index=more_logits_indices)
         more_logits = more_logits * more_mask.unsqueeze(2)
@@ -71,10 +73,15 @@ class SentencePertubationNormalizer(Module):
         less_logits = less_logits.gather(dim=1, index=less_logits_indices)
         less_logits = less_logits * less_mask.unsqueeze(2)
 
-        more_probs = torch.log_softmax(more_logits, dim=-1).detach()
-        less_probs = torch.log_softmax(less_logits, dim=-1)
+        more_log_probs = torch.log_softmax(more_logits, dim=-1)
+        less_log_probs = torch.log_softmax(less_logits, dim=-1)
 
-        return (F.mse_loss(more_log_probs, less_log_probs),)
+        return (F.mse_loss(more_log_probs, less_log_probs.detach()) + F.mse_loss(less_log_probs, more_log_probs.detach()) + self.regularization_term(),)
+
+    def regularization_term(self):
+        current_named_parameters = {k:v for k, v in self.model.named_parameters()}
+        terms = torch.Tensor([F.mse_loss(current_named_parameters[k], v) for k, v in self.model_original_parameters.items()])
+        return terms.sum()
 
 
 class MLPHead(Module):
