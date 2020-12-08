@@ -108,7 +108,7 @@ def run():
         overall_fpr = overall_metrics["eval_false_positive_rate"]
         overall_fnr = overall_metrics["eval_false_negative_rate"]
 
-        result_metrics = {"pinned_auc": 0, "false_positive_equality_diff": 0, "false_negative_equality_diff": 0}
+        result_metrics = {"pinned_auc": 0., "false_positive_equality_diff": 0., "false_negative_equality_diff": 0.}
         for term in terms:
             sub_df = df[df["subgroup"] == term]
             if len(sub_df) == 0:

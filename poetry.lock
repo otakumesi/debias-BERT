@@ -366,15 +366,14 @@ python-versions = "*"
 
 [[package]]
 name = "datasets"
-version = "1.1.2"
-description = "HuggingFace/Datasets is an open library of NLP datasets."
+version = "1.1.3"
+description = ""
 category = "main"
 optional = false
 python-versions = "*"
 
 [package.dependencies]
 dill = "*"
-filelock = "*"
 multiprocess = "*"
 numpy = ">=1.17"
 pandas = "*"
@@ -385,14 +384,19 @@ xxhash = "*"
 
 [package.extras]
 apache-beam = ["apache-beam"]
-benchmarks = ["numpy (1.18.5)", "tensorflow (2.3.0)", "torch (1.6.0)", "transformers (3.0.2)"]
-dev = ["apache-beam", "absl-py", "bs4", "elasticsearch", "faiss-cpu", "langdetect", "mwparserfromhell", "nltk", "pytest", "pytest-xdist", "tensorflow", "torch", "tldextract", "transformers", "zstandard", "black", "isort", "flake8 (3.7.9)"]
-docs = ["recommonmark", "sphinx (3.1.2)", "sphinx-markdown-tables", "sphinx-rtd-theme (0.4.3)", "sphinx-copybutton"]
-quality = ["black", "isort", "flake8 (3.7.9)"]
 tensorflow = ["tensorflow (>=2.2.0)"]
 tensorflow_gpu = ["tensorflow-gpu (>=2.2.0)"]
-tests = ["apache-beam", "absl-py", "bs4", "elasticsearch", "faiss-cpu", "langdetect", "mwparserfromhell", "nltk", "pytest", "pytest-xdist", "tensorflow", "torch", "tldextract", "transformers", "zstandard"]
 torch = ["torch"]
+tests = ["apache-beam", "absl-py", "bs4", "conllu", "elasticsearch", "faiss-cpu", "langdetect", "lxml", "mwparserfromhell", "nltk", "pytest", "pytest-xdist", "tensorflow", "torch", "tldextract", "transformers", "xlrd", "zstandard"]
+quality = ["black", "isort", "flake8 (3.7.9)"]
+benchmarks = ["numpy (1.18.5)", "tensorflow (2.3.0)", "torch (1.6.0)", "transformers (3.0.2)"]
+docs = ["recommonmark", "sphinx (3.1.2)", "sphinx-markdown-tables", "sphinx-rtd-theme (0.4.3)", "sphinx-copybutton"]
+
+[package.source]
+type = "git"
+url = "https://github.com/huggingface/datasets.git"
+reference = "master"
+resolved_reference = "ace588fc48cd061764e5f70659bc6ef4de1afcaa"
 
 [[package]]
 name = "decorator"
@@ -2182,7 +2186,7 @@ testing = ["pytest (>=3.5,<3.7.3 || >3.7.3)", "pytest-checkdocs (>=1.2.3)", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "3efaef743e59f9c63638c14f8bce5e67b144d0de24fdd97cd4f1978a5562ae70"
+content-hash = "e639ebc79a7ea7a4f571c4ede2b257fe7a13cb8065e33cd9ec58b466a14daeda"
 
 [metadata.files]
 absl-py = [
@@ -2375,10 +2379,7 @@ dataclasses = [
     {file = "dataclasses-0.6-py3-none-any.whl", hash = "sha256:454a69d788c7fda44efd71e259be79577822f5e3f53f029a22d08004e951dc9f"},
     {file = "dataclasses-0.6.tar.gz", hash = "sha256:6988bd2b895eef432d562370bb707d540f32f7360ab13da45340101bc2307d84"},
 ]
-datasets = [
-    {file = "datasets-1.1.2-py3-none-any.whl", hash = "sha256:4970dbf3f3cad6f4e4ffbaa1184b8fb0ee700efbd2059b50da2d248bfe6def8d"},
-    {file = "datasets-1.1.2.tar.gz", hash = "sha256:265e007e315dcd3ef669fd56301ab0c6e863606c54dc4d37c2173bd05eba5efa"},
-]
+datasets = []
 decorator = [
     {file = "decorator-4.4.2-py2.py3-none-any.whl", hash = "sha256:41fa54c2a0cc4ba648be4fd43cff00aedf5b9465c9bf18d64325bc225f08f760"},
     {file = "decorator-4.4.2.tar.gz", hash = "sha256:e3a62f0520172440ca0dcc823749319382e377f37f140a0b99ef45fecb84bfe7"},

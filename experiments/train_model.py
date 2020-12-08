@@ -98,7 +98,7 @@ def train(model_args, data_args, train_args):
         }
 
     if data_args.augment_data == True:
-        dataset = dataset.map(augment_dataset, remove_columns=['', 'annotations', 'anon_writer', 'anon_annotators'], batched=True)
+        dataset = dataset.map(augment_dataset, remove_columns=['Unnamed: 0', 'annotations', 'anon_writer', 'anon_annotators'], batched=True)
 
     dataset = dataset.map(
         lambda ex: {
@@ -118,6 +118,8 @@ def train(model_args, data_args, train_args):
     )
 
     def get_indices(ex):
+        max_len = MAX_LEN
+
         m_input_ids = [str(x) for x in ex["more_input_ids"][1:]]
         l_input_ids = [str(x) for x in ex["less_input_ids"][1:]]
 
@@ -129,19 +131,19 @@ def train(model_args, data_args, train_args):
                 more_result += [x for x in range(m_start_pos, m_end_pos, 1)]
                 less_result += [x for x in range(l_start_pos, l_end_pos, 1)]
 
-        more_mask = torch.ones(MAX_LEN, dtype=torch.int64)
+        more_mask = torch.ones(max_len, dtype=torch.int64)
         more_len = len(more_result)
-        if more_len < MAX_LEN:
-            more_diff = MAX_LEN - more_len
+        if more_len < max_len:
+            more_diff = max_len - more_len
             more_mask.scatter_(0, torch.LongTensor(range(more_len, more_len + more_diff)), 0)
-            more_result.extend([MAX_LEN - 1] * more_diff)
+            more_result.extend([max_len - 1] * more_diff)
 
-        less_mask = torch.ones(MAX_LEN, dtype=torch.int64)
+        less_mask = torch.ones(max_len, dtype=torch.int64)
         less_len = len(less_result)
-        if less_len < MAX_LEN:
-            less_diff = MAX_LEN - less_len
+        if less_len < max_len:
+            less_diff = max_len - less_len
             less_mask.scatter_(0, torch.LongTensor(range(less_len, less_len + less_diff)), 0)
-            less_result.extend([MAX_LEN - 1] * less_diff)
+            less_result.extend([max_len - 1] * less_diff)
 
         return {'more_indices': more_result,
                 'more_mask': more_mask,

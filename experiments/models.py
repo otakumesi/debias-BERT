@@ -30,7 +30,7 @@ class SentencePertubationNormalizer(Module):
             input_ids=more_input_ids,
             token_type_ids=more_token_type_ids,
             attention_mask=more_attention_mask,
-            output_hidden_states=True,
+            output_attentions=True,
             return_dict=True,
         )
 
@@ -38,15 +38,31 @@ class SentencePertubationNormalizer(Module):
             input_ids=less_input_ids,
             token_type_ids=less_token_type_ids,
             attention_mask=less_attention_mask,
-            output_hidden_states=True,
+            output_attentions=True,
             return_dict=True,
         )
 
-        more_logits = more_outputs.logits * more_attention_mask.unsqueeze(2)
-        less_logits = less_outputs.logits * less_attention_mask.unsqueeze(2)
+        # more_logits = more_outputs.logits * more_attention_mask.unsqueeze(2)
+        # less_logits = less_outputs.logits * less_attention_mask.unsqueeze(2)
 
         vocab_size = self.model.config.vocab_size
 
+        # batch_size = more_input_ids.shape[0]
+        # seq_size = more_attention_mask.shape[1]
+        # more_attentions = torch.stack(more_outputs.attentions).permute(1, 0, 2, 3, 4)
+        # more_attentions *= more_attention_mask.view(batch_size, 1, 1, 1, seq_size)
+
+        # less_attentions = torch.stack(less_outputs.attentions).permute(1, 0, 2, 3, 4)
+        # less_attentions*= less_attention_mask.view(batch_size, 1, 1, 1, seq_size)
+
+        # more_attention_indeces = more_indices.view(batch_size, 1, 1, 1, seq_size)
+        # less_attention_indeces = less_indices.view(batch_size, 1, 1, 1, seq_size)
+        # more_attentions = more_attentions.gather(dim=4, index=more_attention_indeces).view(batch_size, -1)
+        # less_attentions = less_attentions.gather(dim=4, index=less_attention_indeces).view(batch_size, -1)
+
+        # more_attentions = more_attentions.where(more_attentions <= 0, more_attentions.log())
+        # less_attentions = less_attentions.where(less_attentions <= 0, less_attentions.log())
+        
         more_logits_indices = more_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=vocab_size)
         more_logits = more_logits.gather(dim=1, index=more_logits_indices)
         more_logits = more_logits * more_mask.unsqueeze(2)
@@ -55,16 +71,10 @@ class SentencePertubationNormalizer(Module):
         less_logits = less_logits.gather(dim=1, index=less_logits_indices)
         less_logits = less_logits * less_mask.unsqueeze(2)
 
-        more_probs = torch.log_softmax(more_logits, dim=-1)
-        less_probs = torch.log_softmax(less_logits, dim=-1).detach()
+        more_probs = torch.log_softmax(more_logits, dim=-1).detach()
+        less_probs = torch.log_softmax(less_logits, dim=-1)
 
-        # m_probs = (more_probs + less_probs) * 0.5
-        # js_div = 0.5 * (F.kl_div(more_probs, m_probs, log_target=True, reduction="none") + F.kl_div(less_probs, m_probs, log_target=True reduction="none"))
-
-        # loss = js_div.sum(dim=(2, 1)).mean()
-        # return (loss,)
-        return (F.mse_loss(more_probs, less_probs),)
-        # return (F.kl_div(more_probs, less_probs, log_target=True, reduction='batchmean'),)
+        return (F.mse_loss(more_log_probs, less_log_probs),)
 
 
 class MLPHead(Module):

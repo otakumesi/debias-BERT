@@ -7,7 +7,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-datasets = "^1.1.2"
+datasets = {git = "https://github.com/huggingface/datasets.git", rev = "master"}
 transformers = "3.4"
 comet_ml = "^3.2.2"
 python-dotenv = "^0.14.0"
@@ -28,6 +28,10 @@ allennlp-models = "^1.2.0"
 geomloss = "^0.2.3"
 spacy = "^2.3.2"
 scikit-learn = "^0.23.2"
+polyglot = "^16.7.4"
+PyICU = "^2.6"
+Morfessor = "^2.0.6"
+pycld2 = "^0.41"
 
 [tool.poetry.dev-dependencies]
 python-language-server = "^0.35.1"
