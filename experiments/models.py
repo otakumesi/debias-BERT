@@ -1,5 +1,4 @@
 from typing import Optional
-import re
 
 import torch
 from torch import Tensor, LongTensor, BoolTensor
@@ -13,7 +12,6 @@ class SentencePertubationNormalizer(Module):
         super().__init__()
         self.model = model
         self.config = model.config
-        self.model_original_parameters = {k:v for k, v in self.model.state_dict().items() if re.search(r'\w+\.layer\.\d+\..+\.(weight|bias)', k)}
 
     def forward(
         self,
@@ -55,7 +53,7 @@ class SentencePertubationNormalizer(Module):
         # more_attentions *= more_attention_mask.view(batch_size, 1, 1, 1, seq_size)
 
         # less_attentions = torch.stack(less_outputs.attentions).permute(1, 0, 2, 3, 4)
-        # less_attentions*= less_attention_mask.view(batch_size, 1, 1, 1, seq_size)
+        # less_attentions *= less_attention_mask.view(batch_size, 1, 1, 1, seq_size)
 
         # more_attention_indeces = more_indices.view(batch_size, 1, 1, 1, seq_size)
         # less_attention_indeces = less_indices.view(batch_size, 1, 1, 1, seq_size)
@@ -73,15 +71,14 @@ class SentencePertubationNormalizer(Module):
         less_logits = less_logits.gather(dim=1, index=less_logits_indices)
         less_logits = less_logits * less_mask.unsqueeze(2)
 
-        more_log_probs = torch.log_softmax(more_logits, dim=-1)
-        less_log_probs = torch.log_softmax(less_logits, dim=-1)
+        more_probs = torch.softmax(more_logits, dim=-1)
+        less_probs = torch.softmax(less_logits, dim=-1)
 
-        return (F.mse_loss(more_log_probs, less_log_probs.detach()) + F.mse_loss(less_log_probs, more_log_probs.detach()) + self.regularization_term(),)
+        more_log_probs = torch.log(more_probs + 1)
+        less_log_probs = torch.log(less_probs + 1)
 
-    def regularization_term(self):
-        current_named_parameters = {k:v for k, v in self.model.named_parameters()}
-        terms = torch.Tensor([F.mse_loss(current_named_parameters[k], v) for k, v in self.model_original_parameters.items()])
-        return terms.sum()
+        rmsle_loss = torch.sqrt(F.mse_loss(less_log_probs, more_log_probs.detach()))
+        return (rmsle_loss,)
 
 
 class MLPHead(Module):
