@@ -74,11 +74,14 @@ class SentencePertubationNormalizer(Module):
         more_probs = torch.softmax(more_logits, dim=-1)
         less_probs = torch.softmax(less_logits, dim=-1)
 
-        more_log_probs = torch.log(more_probs + 1)
-        less_log_probs = torch.log(less_probs + 1)
+        more_log_probs = torch.log(more_probs)
+        less_log_probs = torch.log(less_probs)
 
-        rmsle_loss = torch.sqrt(F.mse_loss(less_log_probs, more_log_probs.detach()))
-        return (rmsle_loss,)
+        # more_log_probs = torch.log(more_probs + 1)
+        # less_log_probs = torch.log(less_probs + 1)
+
+        # rmsle_loss = torch.sqrt(F.mse_loss(less_log_probs, more_log_probs.detach()))
+        return (F.l1_loss(less_log_probs, more_log_probs),)
 
 
 class MLPHead(Module):
