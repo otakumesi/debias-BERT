@@ -71,8 +71,17 @@ class SentencePertubationNormalizer(Module):
         less_logits = less_logits.gather(dim=1, index=less_logits_indices)
         less_logits = less_logits * less_mask.unsqueeze(2)
 
-        more_log_probs = torch.log_softmax(more_logits, dim=-1)
-        less_log_probs = torch.log_softmax(less_logits, dim=-1)
+        more_probs = torch.softmax(more_logits, dim=-1).detach()
+        less_probs = torch.softmax(less_logits, dim=-1)
+
+        # hellinger distance
+        import ipdb; ipdb.set_trace()
+        loss = (1 - (less_probs.sqrt().matmal(more_probs.sqrt()))).sqrt().sum(dim=1).mean(dim=0)
+
+        # loss = F.l1_loss(less_probs, more_probs)
+
+        # more_log_probs = torch.log_softmax(more_logits, dim=-1)
+        # less_log_probs = torch.log_softmax(less_logits, dim=-1)
 
         # more_log_probs = torch.log(more_probs)
         # less_log_probs = torch.log(less_probs)
@@ -80,7 +89,8 @@ class SentencePertubationNormalizer(Module):
         # more_log_logits = torch.log(more_logits + 1)
         # less_log_logits = torch.log(less_logits + 1)
 
-        return (F.kl_div(less_log_probs, more_log_probs.detach(), log_target=True, reduction="batchmean"),)
+        # loss = F.kl_div(less_log_probs, more_log_probs.detach(), log_target=True, reduction="batchmean")
+        return (loss,)
 
 
 class MLPHead(Module):
