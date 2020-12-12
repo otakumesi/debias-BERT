@@ -20,6 +20,7 @@ import dataclasses
 import logging
 import os
 import sys
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Callable, Dict, Optional
 
@@ -178,6 +179,8 @@ def main():
         # so that you can share your model easily on huggingface.co/models =)
         if trainer.is_world_master():
             tokenizer.save_pretrained(training_args.output_dir)
+
+    Path(training_args.output_dir / data_args.task_name).touch()
 
     # Evaluation
     eval_results = {}

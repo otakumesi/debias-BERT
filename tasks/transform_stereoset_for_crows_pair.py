@@ -11,7 +11,7 @@ def transoform_dataset():
     with open(DATASET_PATH, 'r') as f:
         stereoset_dict = json.load(f)
 
-    stereoset = pd.json_normalize(stereoset_dict['data']['intersentence'])
+    stereoset = pd.json_normalize(stereoset_dict['data']['intrasentence'])
     dataset = Dataset.from_pandas(stereoset)
 
 

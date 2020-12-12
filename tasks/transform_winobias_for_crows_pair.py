@@ -27,8 +27,8 @@ def transform_dataset():
             writer = csv.writer(f)
             writer.writerow(['', 'sent_more', 'sent_less', 'stereo_antistereo', 'bias_type'])
 
-            for i, (anti_sent, pro_sent) in enumerate(zip(anti_dataset, pro_dataset)):
-                writer.writerow([str(i), anti_sent, pro_sent, 'stereo', 'gender'])
+            for i, (pro_sent, anti_sent) in enumerate(zip(pro_dataset, anti_dataset)):
+                writer.writerow([str(i), pro_sent, anti_sent, 'stereo', 'gender'])
 
 
 if __name__ == '__main__':
