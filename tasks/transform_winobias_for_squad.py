@@ -26,12 +26,12 @@ def transform_dataset(sentences):
         target = objective2subjective.get(target, target)
 
         squad_format_record = {
-            "id": i,
+            "id": f"{i}sent",
             "title": "Winobias Sentence",
             "context": sent,
             "question": f"What does {target} do?",
             "answers": {
-                "answer_start": [int(pos)],
+                "answer_start": [pos],
                 "text": [answer]
             },
         }
