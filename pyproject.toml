@@ -8,7 +8,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.8"
 datasets = {git = "https://github.com/huggingface/datasets.git", rev = "master"}
-transformers = "3.4"
+transformers = "4.0.1"
 comet_ml = "^3.2.2"
 python-dotenv = "^0.14.0"
 inflect = "^4.1.0"
@@ -23,7 +23,7 @@ pyjsg = "^0.10.0"
 pytorch-lightning = "^1.0.1"
 overrides = "^3.1.0"
 catalyst = "^20.10.1"
-allennlp = "1.2.1"
+allennlp = {git = "https://github.com/allenai/allennlp.git"}
 allennlp-models = "^1.2.0"
 geomloss = "^0.2.3"
 spacy = "^2.3.2"
