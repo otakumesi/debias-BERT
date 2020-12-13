@@ -71,17 +71,8 @@ class SentencePertubationNormalizer(Module):
         less_logits = less_logits.gather(dim=1, index=less_logits_indices)
         less_logits = less_logits * less_mask.unsqueeze(2)
 
-        more_probs = torch.softmax(more_logits, dim=-1).detach()
-        less_probs = torch.softmax(less_logits, dim=-1)
-
-        # hellinger distance
-        import ipdb; ipdb.set_trace()
-        loss = (1 - (less_probs.sqrt().matmal(more_probs.sqrt()))).sqrt().sum(dim=1).mean(dim=0)
-
-        # loss = F.l1_loss(less_probs, more_probs)
-
-        # more_log_probs = torch.log_softmax(more_logits, dim=-1)
-        # less_log_probs = torch.log_softmax(less_logits, dim=-1)
+        more_log_probs = torch.log_softmax(more_logits, dim=-1)
+        less_log_probs = torch.log_softmax(less_logits, dim=-1)
 
         # more_log_probs = torch.log(more_probs)
         # less_log_probs = torch.log(less_probs)
@@ -89,90 +80,7 @@ class SentencePertubationNormalizer(Module):
         # more_log_logits = torch.log(more_logits + 1)
         # less_log_logits = torch.log(less_logits + 1)
 
+        loss = F.kl_div(less_log_probs, more_log_probs.detach(), log_target=True, reduction="batchmean")
         # loss = F.kl_div(less_log_probs, more_log_probs.detach(), log_target=True, reduction="batchmean")
+
         return (loss,)
-
-
-class MLPHead(Module):
-    def __init__(self, n_input: int, n_classes: int, n_hidden: int, dropout=None):
-        super().__init__()
-
-        self.classifier = Sequential(
-            Linear(n_input, n_hidden),
-            BatchNorm1d(n_hidden),
-            ReLU(),
-            Dropout(dropout),
-            Linear(n_hidden, n_classes),
-        )
-
-    def forward(self, spans):
-        return self.classifier(spans)
-
-
-class MyCorefResolver(Module):
-    # The code is inspired The Model inspired Tenney et al. (2019)
-    # https://openreview.net/forum?id=SJzSgnRcKX
-    # https://www.kaggle.com/mateiionita/taming-the-bert-a-baseline
-    # https://www.kaggle.com/ceshine/pytorch-bert-baseline-public-score-0-54
-
-    def __init__(self, model: Module, n_classes: int = 3, dropout: float = 0.5):
-        super().__init__()
-        self.model = model
-        self.config = model.config
-
-        self.head = MLPHead(
-            model.config.hidden_size * 3,
-            n_classes,
-            model.config.hidden_size * 2 + n_classes,
-            dropout,
-        )
-
-    def forward(
-        self,
-        input_ids: Tensor,
-        attention_mask: Tensor,
-        token_type_ids: Tensor,
-        p_span_indeces: LongTensor,
-        a_span_indeces: LongTensor,
-        b_span_indeces: LongTensor,
-        labels: Optional[BoolTensor],
-    ):
-
-        p_indeces = p_span_indeces.unsqueeze(1)
-        a_indeces = a_span_indeces.unsqueeze(1)
-        b_indeces = b_span_indeces.unsqueeze(1)
-
-        model_outputs, _ = self.model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-        )
-
-        span_p_embeddings = self.calculate_meaned_span_embeddings(
-            model_outputs, p_indeces
-        )
-        span_a_embeddings = self.calculate_meaned_span_embeddings(
-            model_outputs, a_indeces
-        )
-        span_b_embeddings = self.calculate_meaned_span_embeddings(
-            model_outputs, b_indeces
-        )
-
-        concatted_span_embeddings = torch.cat(
-            (span_a_embeddings, span_b_embeddings, span_p_embeddings), -1
-        ).squeeze(1)
-        logits = self.head(concatted_span_embeddings)
-        loss = F.cross_entropy(logits, labels.long())
-
-        return loss, logits
-
-    def calculate_meaned_span_embeddings(self, embeddings, span_indeces):
-        span_embeddings, span_mask = batched_span_select(
-            embeddings.contiguous(), span_indeces
-        )
-        span_mask = span_mask.unsqueeze(-1)
-        span_embeddings *= span_mask
-        summed_span_embeddings = span_embeddings.sum(2)
-        summed_span_mask = span_mask.sum(2)
-
-        return summed_span_embeddings / torch.clamp_min(summed_span_mask, 1)
