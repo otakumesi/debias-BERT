@@ -15,8 +15,6 @@ def transform_dataset(sentences):
     results = []
     for i, sent in enumerate(sentences):
         words = re.findall(r"\[(.+?)\]", sent)
-        if len(words) < 2:
-            import ipdb; ipdb.set_trace()
         answer = words[0]
         target = words[1].lower()
         sent = sent.replace("[", "").replace("]", "")
@@ -26,7 +24,7 @@ def transform_dataset(sentences):
         target = objective2subjective.get(target, target)
 
         squad_format_record = {
-            "id": f"{i}sent",
+            "id": f"sentence_{i}",
             "title": "Winobias Sentence",
             "context": sent,
             "question": f"What does {target} do?",
