@@ -1,10 +1,7 @@
-from typing import Optional
-
 import torch
-from torch import Tensor, LongTensor, BoolTensor
+from torch import Tensor
 import torch.nn.functional as F
-from torch.nn import Module, Sequential, ReLU, Linear, Dropout, BatchNorm1d
-from allennlp.nn.util import batched_span_select
+from torch.nn import Module
 
 
 class SentencePertubationNormalizer(Module):
