@@ -21,13 +21,15 @@ def transform_dataset(sentences):
 
         pos = sent.find(answer)
 
-        target = objective2subjective.get(target, target)
+        # target = objective2subjective.get(target, target)
+        # question = f"What does {target} do?"
+        question = target
 
         squad_format_record = {
             "id": f"sentence_{i}",
             "title": "Winobias Sentence",
             "context": sent,
-            "question": f"What does {target} do?",
+            "question": question,
             "answers": {
                 "answer_start": [pos],
                 "text": [answer]

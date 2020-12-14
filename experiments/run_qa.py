@@ -93,7 +93,7 @@ class DataTrainingArguments:
         metadata={"help": "The number of processes to use for the preprocessing."},
     )
     max_seq_length: int = field(
-        default=384,
+        default=31,
         metadata={
             "help": "The maximum total input sequence length after tokenization. Sequences longer "
             "than this will be truncated, sequences shorter will be padded."
@@ -119,7 +119,7 @@ class DataTrainingArguments:
         },
     )
     doc_stride: int = field(
-        default=128,
+        default=0,
         metadata={"help": "When splitting up a long document into chunks, how much stride to take between chunks."},
     )
     n_best_size: int = field(
@@ -127,7 +127,7 @@ class DataTrainingArguments:
         metadata={"help": "The total number of n-best predictions to generate when looking for an answer."},
     )
     max_answer_length: int = field(
-        default=30,
+        default=2,
         metadata={
             "help": "The maximum length of an answer that can be generated. This is needed because the start "
             "and end predictions are not conditioned on one another."
