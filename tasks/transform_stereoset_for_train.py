@@ -11,6 +11,7 @@ import spacy
 # predictor = Predictor.from_path("https://storage.googleapis.com/allennlp-public-models/biaffine-dependency-parser-ptb-2020.04.06.tar.gz")
 
 nlp = spacy.load("en_core_web_lg")
+p = inflect.engine()
 
 DATASET_PATH = Path("data/stereoset_dev.json")
 OUTPUT_PATH = Path("data") / 'stereoset_train.csv'
