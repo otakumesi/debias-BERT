@@ -24,7 +24,6 @@ pytorch-lightning = "^1.0.1"
 overrides = "^3.1.0"
 catalyst = "^20.10.1"
 allennlp = {git = "https://github.com/allenai/allennlp.git"}
-allennlp-models = {git = "https://github.com/allenai/allennlp-models.git"}
 geomloss = "^0.2.3"
 spacy = "^2.3.2"
 scikit-learn = "^0.23.2"
@@ -32,6 +31,7 @@ polyglot = "^16.7.4"
 PyICU = "^2.6"
 Morfessor = "^2.0.6"
 pycld2 = "^0.41"
+allennlp-models = {git = "https://github.com/allenai/allennlp-models.git", rev = "master"}
 
 [tool.poetry.dev-dependencies]
 python-language-server = "^0.35.1"
