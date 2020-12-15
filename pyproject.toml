@@ -24,7 +24,7 @@ pytorch-lightning = "^1.0.1"
 overrides = "^3.1.0"
 catalyst = "^20.10.1"
 allennlp = {git = "https://github.com/allenai/allennlp.git"}
-allennlp-models = "^1.2.0"
+allennlp-models = {git = "https://github.com/allenai/allennlp-models.git"}
 geomloss = "^0.2.3"
 spacy = "^2.3.2"
 scikit-learn = "^0.23.2"
