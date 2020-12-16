@@ -19,7 +19,7 @@ def main():
     df_valid.to_csv(DATASET_FOLDER / "stereoset_train.valid.csv")
 
     print(f"--- output test_set... {len(df_test)} data ---")
-    df_test.to_csv(DATASET_FOLDER / "setereoset_train.test.csv")
+    df_test.to_csv(DATASET_FOLDER / "stereoset_train.test.csv")
 
 
 if __name__ == '__main__':
