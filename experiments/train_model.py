@@ -23,7 +23,7 @@ ARGS_JSON_FILE = "args_train_model.json"
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
-DATASET_PATH = Path("data") / "crows_pairs_anonymized.csv"
+DATASET_PATH = Path("data") / "stereoset_train.train.csv"
 
 
 def train(model_args, data_args, train_args):
@@ -77,7 +77,7 @@ def train(model_args, data_args, train_args):
                     new_module.load_state_dict(target_state_dict)
                     setattr(sup_module, name, new_module)
 
-    MAX_LEN = 50
+    MAX_LEN = 70
     dataset = load_dataset("csv", data_files=str(DATASET_PATH), split="train")
 
     def augment_dataset(exs):
