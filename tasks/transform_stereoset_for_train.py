@@ -16,16 +16,36 @@ p = inflect.engine()
 DATASET_PATH = Path("data/stereoset_dev.json")
 OUTPUT_PATH = Path("data") / 'stereoset_train.csv'
 
-RELIGION_PEOPLE_SET = {"Muslim, Brahmin", "Christian", "Buddhist", "Jew", "Atheist", "Catholic", "Protestant"}
-RELIGION_ITEM_SET = {"Bible", "Koran", "Sutra"}
-RACE_SET = {'Ethiopian', 'Cameroon', 'Sierra Leon', 'Iranian', 'Lebanon', 'Spain', 'Eriteria', 'Morocco', 'Crimean', 'Japanese', 'Iraq', 'Columbian', 'Yemen', 'African', 'Britain', 'Norweigan', 'Russian', 'Bengali', 'Syria', 'Jordan', 'Hispanic', 'Ghanaian', 'Persian people', 'Vietnam', 'Arab', 'Eritrean', 'Italy', 'Ukrainian', 'Somalia', 'Bangladesh', 'Saudi Arabian', 'Cape Verde', 'Norway', 'Ecuador', 'Afghanistan', 'Ethiopia', 'White', 'Black', 'Asian'}
-PROFESSION_SET = {'musician', 'civil servant', 'football player', 'software developer', 'policeman', 'tailor', 'mover', 'prisoner', 'plumber', 'producer', 'nurse', 'engineer', 'performing artist', 'physicist', 'manager', 'politician', 'researcher', 'commander', 'assistant', 'entrepreneur', 'mathematician', 'butcher', 'delivery man', 'chess player', 'bartender', 'prosecutor', 'chemist', 'psychologist', 'guitarist', 'historian'}
+RELIGION_PEOPLE_SET = {"Muslim", "Brahmin"}
+RELIGION_ITEM_SET = {"Bible"}
+RACE_ETHINIC_SET = {"Cameroon", "Sierra Leon", "Lebanon", "Spain", "Britain", "Eriteria", "Morocco", "Crimean", "Iraq", "Yemen", "Syria", "Jordan", "Vietnam", "Italy", "Somalia", "Bangladesh", "Cape Verde", "Norway", "Ecuador", "Afghanistan", "Ethiopia"}
+RACE_NATION_SET = {"Ethiopian", "Iranian", "Japanese", "Columbian", "Norweigan", "Russian", "Bengali", "Ghanaian", "Persian people", "Arab", "Eritrean", "Ukrainian", "Saudi Arabian"}
+RACE_INNER_ETHNIC_SET = {"Hispanic", "African"}
+
+PROFESSION_SET = {"musician", "civil servant", "football player", "software developer", "policeman", "tailor", "mover", "prisoner", "plumber", "producer", "nurse", "engineer", "performing artist", "physicist", "manager", "politician", "researcher", "commander", "assistant", "entrepreneur", "mathematician", "butcher", "delivery man", "chess player", "bartender", "prosecutor", "chemist", "psychologist", "guitarist", "historian"}
+
 
 SOCIAL_GROUP_SETS = {
-    "race": RACE_SET,
     "religion_people": RELIGION_PEOPLE_SET,
     "religion_item": RELIGION_ITEM_SET,
+    "race_nation": RACE_NATION_SET,
+    "race_ethinic": RACE_ETHINIC_SET,
+    "race_inner": RACE_INNER_ETHNIC_SET,
     "profession": PROFESSION_SET
+}
+
+AUGMENT_MAPS = {
+    "Muslim": {"Atheist"}
+    "Japanese": {"Chinese", "Asian"},
+    "African": {"Black"}
+}
+
+ALTERNATIVE_GROUP_SETS = {
+    "religion_people": {"Christian", "Catholic", "Protestant", "Buddhist"},
+    "religion_item": {"Koran", "Sutra"},
+    "race_nation": {"United States", "UK", "USA"},
+    "race_ethinic": {"American", "English"}
+    "race_inner": {"White"}
 }
 
 GENDER_WORDSWAP_MAP = {
@@ -84,10 +104,18 @@ def transoform_dataset():
     df_stereoset = pd.DataFrame({"stereo_antistereo": [], "bias_type": [], "sent_more": [], "target": []})
     for i, data in enumerate(dataset):
         sentences = data["sentences"]
+        bias_type = data["bias_type"]
+
         if data["bias_type"] == "religion":
             bias_type = "religion_people" if data["target"] in RELIGION_PEOPLE_SET else "religion_item"
-        else:
-            bias_type = data["bias_type"]
+
+        if data["bias_type"] == "race":
+            if data["target"] in RACE_NATION_SET:
+                bias_type = "race_nation"
+            elif data["target"] in RACE_ETHINIC_SET:
+                bias_type = "race_ethnic"
+            else:
+                bias_type = "race_inner"
 
         for sent in sentences:
             df_stereoset = df_stereoset.append({"stereo_antistereo": sent["gold_label"], "bias_type": bias_type, "sent_more": sent["sentence"], "target": data["target"]}, ignore_index=True)
@@ -123,8 +151,8 @@ def transoform_dataset():
             }, ignore_index=True)
         else:
             groups = SOCIAL_GROUP_SETS[row["bias_type"]]
-            other_groups = groups - {row["target"]}
-            for group in other_groups:
+            alternative_groups = ALTERNATIVE_GROUP_SETS[row["bias_type"]] if row["bias_type"] != "profession" else SOCIAL_GROUP_SETS[row["bias_type"]] - {row["bias_type"]}
+            for group in alternative_groups:
                 sent = row["sent_more"]
                 sent = sent.replace(target.lower(), group.lower()).replace(target.capitalize(), group.capitalize())
                 df_output = df_output.append({
