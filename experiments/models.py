@@ -68,8 +68,8 @@ class SentencePertubationNormalizer(Module):
         less_logits = less_logits.gather(dim=1, index=less_logits_indices)
         less_logits = less_logits * less_mask.unsqueeze(2)
 
-        more_log_probs = torch.log_softmax(more_logits, dim=-1)
-        less_log_probs = torch.log_softmax(less_logits, dim=-1)
+        more_probs = torch.softmax(more_logits, dim=-1)
+        less_probs = torch.softmax(less_logits, dim=-1).detach()
 
         # more_log_probs = torch.log(more_probs)
         # less_log_probs = torch.log(less_probs)
@@ -77,7 +77,13 @@ class SentencePertubationNormalizer(Module):
         # more_log_logits = torch.log(more_logits + 1)
         # less_log_logits = torch.log(less_logits + 1)
 
-        loss = F.kl_div(less_log_probs, more_log_probs.detach(), log_target=True, reduction="batchmean")
-        # loss = F.kl_div(less_log_probs, more_log_probs.detach(), log_target=True, reduction="batchmean")
+        # loss = F.kl_div(more_log_probs, less_log_probs.detach(), log_target=True, reduction="batchmean")
+
+        M = (more_probs + less_probs) * 0.5
+        left_kl = F.kl_div(more_probs.log(), M, reduction="none") * 0.5
+        right_kl = F.kl_div(less_probs.log(), M, reduction="none") * 0.5
+        import ipdb; ipdb.set_trace()
+        loss = (left_kl + right_kl).sum(dim=-1).mean()
+
 
         return (loss,)

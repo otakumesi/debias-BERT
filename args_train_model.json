@@ -3,19 +3,19 @@
   "load_best_model_at_end": true,
   "output_dir": "models",
   "seed": 42,
-  "learning_rate": 2e-5,
-  "mixout_prob": 0.3,
+  "learning_rate": 2e-6,
+  "mixout_prob": 0.0,
   "per_device_train_batch_size": 1,
   "warmup_steps": 3016,
   "hidden_dropout_prob": 0,
   "attention_probs_dropout_prob": 0,
   "weight_decay": 0,
   "max_grad_norm": 1,
-  "num_train_epochs": 20,
-  "logging_steps": 3000,
+  "num_train_epochs": 1,
+  "logging_steps": 1,
   "eval_steps": 1000,
   "remove_unused_columns": false,
   "do_train": true,
-  "augment_data": true
+  "augment_data": false
 }
 
