@@ -23,7 +23,7 @@ ARGS_JSON_FILE = "args_train_model.json"
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
-DATASET_PATH = Path("data") / "stereoset_train.train.csv"
+DATASET_PATH = Path("data") / "crows_pairs_train.csv"
 
 
 def train(model_args, data_args, train_args):

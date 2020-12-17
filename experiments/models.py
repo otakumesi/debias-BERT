@@ -82,8 +82,7 @@ class SentencePertubationNormalizer(Module):
         M = (more_probs + less_probs) * 0.5
         left_kl = F.kl_div(more_probs.log(), M, reduction="none") * 0.5
         right_kl = F.kl_div(less_probs.log(), M, reduction="none") * 0.5
-        import ipdb; ipdb.set_trace()
-        loss = (left_kl + right_kl).sum(dim=-1).mean()
+        loss = (left_kl + right_kl).sum(dim=[-1, -2]).mean()
 
 
         return (loss,)
