@@ -68,8 +68,8 @@ class SentencePertubationNormalizer(Module):
         less_logits = less_logits.gather(dim=1, index=less_logits_indices)
         less_logits = less_logits * less_mask.unsqueeze(2)
 
-        more_probs = torch.softmax(more_logits, dim=-1)
-        less_probs = torch.softmax(less_logits, dim=-1).detach()
+        more_probs = torch.softmax(more_logits, dim=-1).detach()
+        less_probs = torch.softmax(less_logits, dim=-1)
 
         # more_log_probs = torch.log(more_probs)
         # less_log_probs = torch.log(less_probs)
