@@ -3,8 +3,8 @@ from comet_ml import Experiment
 import logging
 import random
 from pathlib import Path
+from dataclasses import asdict
 import difflib
-import re
 
 import numpy as np
 from datasets import load_dataset
@@ -22,8 +22,6 @@ from mixout import MixLinear
 ARGS_JSON_FILE = "args_train_model.json"
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
-
-DATASET_PATH = Path("data") / "crows_pairs_train.csv"
 
 
 def train(model_args, data_args, train_args):
@@ -78,7 +76,8 @@ def train(model_args, data_args, train_args):
                     setattr(sup_module, name, new_module)
 
     MAX_LEN = 70
-    dataset = load_dataset("csv", data_files=str(DATASET_PATH), split="train")
+
+    dataset = load_dataset("csv", data_files=str(data_args.dataset_path), split="train")
 
     def augment_dataset(exs):
         sents_more = []
@@ -121,8 +120,8 @@ def train(model_args, data_args, train_args):
     def get_indices(ex):
         max_len = MAX_LEN
 
-        m_input_ids = [str(x) for x in ex["more_input_ids"][1:]]
-        l_input_ids = [str(x) for x in ex["less_input_ids"][1:]]
+        m_input_ids = [str(x) for x in ex["more_input_ids"]]
+        l_input_ids = [str(x) for x in ex["less_input_ids"]]
 
         matcher = difflib.SequenceMatcher(None, m_input_ids, l_input_ids)
         more_result, less_result = [], []
@@ -195,6 +194,10 @@ def train(model_args, data_args, train_args):
         train_dataset=dataset,
         optimizers=(optimizer, None),
     )
+
+    trainer.log(asdict(train_args))
+    trainer.log(asdict(data_args))
+    trainer.log(asdict(model_args))
 
     trainer.train()
 

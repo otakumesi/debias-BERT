@@ -27,7 +27,7 @@ class SentencePertubationNormalizer(Module):
             input_ids=more_input_ids,
             token_type_ids=more_token_type_ids,
             attention_mask=more_attention_mask,
-            output_attentions=True,
+            output_hidden_states=True,
             return_dict=True,
         )
 
@@ -35,54 +35,41 @@ class SentencePertubationNormalizer(Module):
             input_ids=less_input_ids,
             token_type_ids=less_token_type_ids,
             attention_mask=less_attention_mask,
-            output_attentions=True,
+            output_hidden_states=True,
             return_dict=True,
         )
 
-        more_logits = more_outputs.logits * more_attention_mask.unsqueeze(2)
-        less_logits = less_outputs.logits * less_attention_mask.unsqueeze(2)
+        # more_logits = more_outputs.logits * more_attention_mask.unsqueeze(2)
+        # less_logits = less_outputs.logits * less_attention_mask.unsqueeze(2)
 
-        vocab_size = self.model.config.vocab_size
+        # vocab_size = self.model.config.vocab_size
 
-        # batch_size = more_input_ids.shape[0]
-        # seq_size = more_attention_mask.shape[1]
-        # more_attentions = torch.stack(more_outputs.attentions).permute(1, 0, 2, 3, 4)
-        # more_attentions *= more_attention_mask.view(batch_size, 1, 1, 1, seq_size)
+        # more_logits_indices = more_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=vocab_size)
+        # more_logits = more_logits.gather(dim=1, index=more_logits_indices)
+        # more_logits = more_logits * more_mask.unsqueeze(2)
 
-        # less_attentions = torch.stack(less_outputs.attentions).permute(1, 0, 2, 3, 4)
-        # less_attentions *= less_attention_mask.view(batch_size, 1, 1, 1, seq_size)
+        # less_logits_indices = less_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=vocab_size)
+        # less_logits = less_logits.gather(dim=1, index=less_logits_indices)
+        # less_logits = less_logits * less_mask.unsqueeze(2)
 
-        # more_attention_indeces = more_indices.view(batch_size, 1, 1, 1, seq_size)
-        # less_attention_indeces = less_indices.view(batch_size, 1, 1, 1, seq_size)
-        # more_attentions = more_attentions.gather(dim=4, index=more_attention_indeces).view(batch_size, -1)
-        # less_attentions = less_attentions.gather(dim=4, index=less_attention_indeces).view(batch_size, -1)
+        # more_probs = torch.log_softmax(more_logits, dim=-1)
+        # less_probs = torch.log_softmax(less_logits, dim=-1)
 
-        # more_attentions = more_attentions.where(more_attentions <= 0, more_attentions.log())
-        # less_attentions = less_attentions.where(less_attentions <= 0, less_attentions.log())
+        # difference weighted less prob between less log probs and more log probs
+        # loss = F.kl_div(less_probs, more_probs.detach(), log_target=True, reduction="batchmean") / less_probs.shape[1]
 
-        more_logits_indices = more_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=vocab_size)
-        more_logits = more_logits.gather(dim=1, index=more_logits_indices)
-        more_logits = more_logits * more_mask.unsqueeze(2)
+        hidden_size = self.model.config.hidden_size
+        more_hs_indices = more_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=hidden_size)
+        more_hidden_state = more_outputs.hidden_states[-1]
+        more_hidden_state = more_hidden_state.gather(dim=1, index=more_hs_indices)
+        more_hidden_state = more_hidden_state * more_mask.unsqueeze(2)
 
-        less_logits_indices = less_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=vocab_size)
-        less_logits = less_logits.gather(dim=1, index=less_logits_indices)
-        less_logits = less_logits * less_mask.unsqueeze(2)
+        less_hs_indices = less_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=hidden_size)
+        less_hidden_state = less_outputs.hidden_states[-1]
+        less_hidden_state = less_hidden_state.gather(dim=1, index=less_hs_indices)
+        less_hidden_state = less_hidden_state * less_mask.unsqueeze(2)
 
-        more_probs = torch.softmax(more_logits, dim=-1).detach()
-        less_probs = torch.softmax(less_logits, dim=-1)
-
-        # more_log_probs = torch.log(more_probs)
-        # less_log_probs = torch.log(less_probs)
-
-        # more_log_logits = torch.log(more_logits + 1)
-        # less_log_logits = torch.log(less_logits + 1)
-
-        # loss = F.kl_div(more_log_probs, less_log_probs.detach(), log_target=True, reduction="batchmean")
-
-        M = (more_probs + less_probs) * 0.5
-        left_kl = F.kl_div(more_probs.log(), M, reduction="none") * 0.5
-        right_kl = F.kl_div(less_probs.log(), M, reduction="none") * 0.5
-        loss = (left_kl + right_kl).sum(dim=[-1, -2]).mean()
-
+        # loss = F.kl_div(less_probs, more_probs.detach(), log_target=True, reduction="batchmean") / less_probs.shape[1]
+        loss = F.cosine_similarity(less_hidden_state, more_hidden_state.detach(), dim=-1).mean()
 
         return (loss,)
