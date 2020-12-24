@@ -59,15 +59,15 @@ class SentencePertubationNormalizer(Module):
         # loss = F.kl_div(less_probs, more_probs.detach(), log_target=True, reduction="batchmean") / less_probs.shape[1]
 
         hidden_size = self.model.config.hidden_size
-        more_hs_indices = more_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=hidden_size)
+        # more_hs_indices = more_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=hidden_size)
         more_hidden_state = more_outputs.hidden_states[-1]
-        more_hidden_state = more_hidden_state.gather(dim=1, index=more_hs_indices)
-        more_hidden_state = more_hidden_state * more_mask.unsqueeze(2)
+        # more_hidden_state = more_hidden_state.gather(dim=1, index=more_hs_indices)
+        # more_hidden_state = more_hidden_state * more_mask.unsqueeze(2)
 
-        less_hs_indices = less_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=hidden_size)
+        #less_hs_indices = less_indices.unsqueeze(2).repeat_interleave(dim=2, repeats=hidden_size)
         less_hidden_state = less_outputs.hidden_states[-1]
-        less_hidden_state = less_hidden_state.gather(dim=1, index=less_hs_indices)
-        less_hidden_state = less_hidden_state * less_mask.unsqueeze(2)
+        # less_hidden_state = less_hidden_state.gather(dim=1, index=less_hs_indices)
+        # less_hidden_state = less_hidden_state * less_mask.unsqueeze(2)
 
         # loss = F.kl_div(less_probs, more_probs.detach(), log_target=True, reduction="batchmean") / less_probs.shape[1]
 
