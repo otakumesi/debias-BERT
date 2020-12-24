@@ -1,49 +1,48 @@
 import json
+import torch
+import torch.nn.functional as F
+from transformers import BertLMHeadModel, BertTokenizer, BertConfig
+import inflect
 
-from allennlp_models.common.ontonotes import Ontonotes
+p = inflect.engine()
+config = BertConfig.from_pretrained('bert-base-uncased')
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', config=config)
+model = BertLMHeadModel.from_pretrained('bert-base-uncased', config=config)
 
-DATASET_PATH = 'data/ontonotes_conll'
+GENDER_NOUNS = ["woman", "man", "girl", "boy"]
+RACE_NOUNS = ["black", "white", "african", "asian", "hispanic", "indian"]
+RELIGION_NOUNS = ['muslim', 'buddhist', 'christian', 'jewish']
 
-PARENS = {
-    '-LRB-': '(',
-    '-RRB-': ')',
-    '-LSB-': '[',
-    '-RSB-': ']',
-    '-LCB-': '{',
-    '-RCB-': '}'
-}
+TEMPLATE_SENTENCES = [
+    "[PERSON_SBJ] [VERB] very [MASK].",
+    "I [VERB] [PERSON_SBJ] [MASK].",
+    "[PERSON_SBJ] is [PERSON_NOUN]. [PERSON_SBJ] is a nice [MASK].",
+    "[PERSON_SBJ] is [PERSON_NOUN]. [PERSON_SBJ] is a bad [MASK].",
+    "[PERSON_SBJ] is [PERSON_NOUN]. [PERSON_OBJ] profession is a [MASK]."
+]
 
-def build_swap_dict():
-    swap_dict = {}
-    for line in open('data/generalized_swaps.txt').readlines():
-        word_pair = line.split('\t')
-        l_word = word_pair[0].strip()
-        r_word = word_pair[1].strip()
-        swap_dict[l_word] = r_word
-        swap_dict[r_word] = l_word
-    return swap_dict
+VERBS = ["is", "look"]
 
-SWAP_DICT = build_swap_dict()
+def build_simple_sentence(verb, person):
+    return "[PERSON_SBJ] [VERB] very [MASK].".replace("[PERSON_SBJ]", person).replace("[VERB]", verb)
 
-def read_ontonotes(file_path: str):
-    reader = Ontonotes()
-    for sentence in reader.dataset_iterator(file_path):
-        yield sentence
+def get_mask_topk_tokens(sents, k=30):
+    inputs = tokenizer(sents)
+    mask_indices = (inputs["input_ids"] == tokenizer.mask_token_id).nonzero()
+    outputs = model(**inputs)
+    logits = F.softmax(outputs.logits, dim=-1)
+    import ipdb; ipdb.set_trace()
+    token_ids = logits.gather(dim=1, index=mask_indices).topk(k=k, dim=-1).indices
+    tokens = tokenizer.convert_ids_to_tokens()
+    return tokens
 
-def build_sentence_dicts(dataset_path: str):
-    sent_dicts = []
-    swap_keys = list(SWAP_DICT.keys())
-    for sentence in read_ontonotes(dataset_path):
-        orig_words = [PARENS.get(word, word.lower()) for word in sentence.words]
+def build_sentences():
+    for verb in VERBS:
+        sents = [build_simple_sentence(verb, person) for noun in RACE_NOUNS]
+        mask_tokens = get_mask_topk_tokens(sents)
 
-        if not any([w in swap_keys for w in orig_words]):
-            continue
 
-        opos_words = [SWAP_DICT.get(word, word) for word in orig_words]
-
-        sent_dict = {'orig_sentence': ' '.join(orig_words),
-                     'swapped_sentence': ' '.join(opos_words) }
-        sent_dicts.append(sent_dict)
+    mask_tokens.extend()
 
     return json.dumps({'data': sent_dicts})
 
