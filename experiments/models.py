@@ -70,6 +70,7 @@ class SentencePertubationNormalizer(Module):
         less_hidden_state = less_hidden_state * less_mask.unsqueeze(2)
 
         # loss = F.kl_div(less_probs, more_probs.detach(), log_target=True, reduction="batchmean") / less_probs.shape[1]
-        loss = F.mse_loss(less_hidden_state, more_hidden_state.detach())
+
+        loss = (more_hidden_state.softmax(dim=-1) * F.mse_loss(less_hidden_state, more_hidden_state.detach(), reduction='none')).sum(dim=-1).mean()
 
         return (loss,)
