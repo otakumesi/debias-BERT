@@ -1,7 +1,8 @@
 import torch
 from torch import Tensor
-import torch.nn.functional as F
 from torch import nn
+import torch.nn.functional as F
+import torch.linalg as LA
 
 
 class SentencePertubationNormalizer(nn.Module):
@@ -59,8 +60,13 @@ class BertEmbeddingsWithDebias(nn.Module):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
+        self.vocab_size = config.vocab_size
 
-        self.bias_subpace = bias_subspace
+        self.bias_subspace = bias_subspace
+        self.bias_subspace.requires_grad = False
+
+        vocab_tensors = self.word_embeddings(torch.tensor(range(0, config.vocab_size)))
+        self.normalize_norm = LA.norm(vocab_tensors, dim=0)
 
     def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
         if input_ids is not None:
@@ -79,9 +85,12 @@ class BertEmbeddingsWithDebias(nn.Module):
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
 
-        if self.bias_subpace is not None:
-            subspace_tensor = self.bias_subspace.view(1, 1, -1).repeat_interleave(input_ids.shape[1], dim=1).repeat_interleave(input_ids.shape[0], dim=0)
+        if self.bias_subspace is not None:
+            device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+            subspace_tensor = self.bias_subspace.view(1, 1, -1).repeat_interleave(input_ids.shape[1], dim=1).repeat_interleave(input_ids.shape[0], dim=0).to(device)
             inputs_embeds -= subspace_tensor
+            inputs_embeds -= self.normalize_norm.view(1, 1, -1).repeat_interleave(input_ids.shape[1], dim=1).repeat_interleave(input_ids.shape[0], dim=0).to(device)
+            inputs_embeds /= LA.norm(inputs_embeds, dim=-1).view(*inputs_embeds.shape[:2], 1).repeat_interleave(inputs_embeds.shape[-1], dim=-1)
 
         position_embeddings = self.position_embeddings(position_ids)
         token_type_embeddings = self.token_type_embeddings(token_type_ids)

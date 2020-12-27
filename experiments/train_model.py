@@ -8,6 +8,7 @@ import difflib
 
 import numpy as np
 from datasets import load_dataset
+from transformers.models.bert.modeling_bert import BertEmbeddings
 from transformers import AutoModelWithLMHead, AutoConfig, AutoTokenizer
 from transformers import HfArgumentParser
 from transformers import TrainingArguments, Trainer, AdamW
@@ -18,6 +19,7 @@ from dotenv import load_dotenv
 from arguments import ModelArguments, DataArguments
 from models import SentencePertubationNormalizer
 from mixout import MixLinear
+from models import BertEmbeddingsWithDebias
 
 ARGS_JSON_FILE = "args_train_model.json"
 logging.basicConfig(level=logging.INFO)
@@ -59,6 +61,17 @@ def train(model_args, data_args, train_args):
         model_args.model_name_or_path, config=config, cache_dir=model_args.cache_dir
     )
     model = SentencePertubationNormalizer(model)
+
+    # Integrate DebiasModule
+    bias_subspace = torch.load("models/gender_subspace.pt")
+    for sup_module in model.modules():
+        for sup_module in model.modules():
+            for name, module in sup_module.named_children():
+                if isinstance(module, BertEmbeddings):
+                    target_state_dict = module.state_dict()
+                    new_module = BertEmbeddingsWithDebias(config=config, bias_subspace=bias_subspace)
+                    new_module.load_state_dict(target_state_dict)
+                    setattr(sup_module, name, new_module)
 
     # Integrate Mixout
     if model_args.mixout_prob > 0:

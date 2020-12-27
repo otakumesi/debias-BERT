@@ -32,6 +32,7 @@ PyICU = "^2.6"
 Morfessor = "^2.0.6"
 pycld2 = "^0.41"
 allennlp-models = {git = "https://github.com/allenai/allennlp-models.git", rev = "master"}
+inflate = "^0.4"
 
 [tool.poetry.dev-dependencies]
 python-language-server = "^0.35.1"

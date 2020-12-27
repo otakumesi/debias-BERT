@@ -7,7 +7,9 @@ import difflib
 import logging
 import pandas as pd
 
-from transformers import AutoTokenizer, AutoModelWithLMHead
+from transformers import AutoTokenizer, AutoConfig, AutoModelWithLMHead
+from transformers.models.bert.modeling_bert import BertEmbeddings
+from models import BertEmbeddingsWithDebias
 from tqdm import tqdm
 
 
@@ -170,9 +172,24 @@ def evaluate(args):
         df_data = df_data[df_data['bias_type'] == args.bias_type]
 
     # supported masked language models
+
+    config = AutoConfig.from_pretrained(args.lm_model)
     tokenizer = AutoTokenizer.from_pretrained(args.lm_model)
     model = AutoModelWithLMHead.from_pretrained(args.lm_model)
     uncased = True
+
+    if args.debias_subspace is not None:
+        # bias_subspace = torch.load(args.debias_subspace)
+        bias_subspace = torch.zeros(config.hidden_size)
+        for sup_module in model.modules():
+            for sup_module in model.modules():
+                for name, module in sup_module.named_children():
+                    if isinstance(module, BertEmbeddings):
+                        target_state_dict = module.state_dict()
+                        new_module = BertEmbeddingsWithDebias(config=config, bias_subspace=bias_subspace)
+                        new_module.load_state_dict(target_state_dict)
+                        setattr(sup_module, name, new_module)
+
 
     model.eval()
     if torch.cuda.is_available():
@@ -278,6 +295,7 @@ def evaluate(args):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--input_file", type=str, help="path to input file")
+parser.add_argument("--debias_subspace", type=str, help="subspace path", default=None)
 parser.add_argument("--lm_model", type=str, help="pretrained LM model to use (options: bert, roberta, albert)")
 parser.add_argument("--bias_type", type=str, help="bias_type", default=None)
 
