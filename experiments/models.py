@@ -50,7 +50,7 @@ class SentencePertubationNormalizer(nn.Module):
 
 
 class BertEmbeddingsWithDebias(nn.Module):
-    def __init__(self, config, bias_subspace):
+    def __init__(self, config, scaling_token_ids_set_list, bias_subspace_tensors, k=1):
         super().__init__()
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
         self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
@@ -62,11 +62,21 @@ class BertEmbeddingsWithDebias(nn.Module):
         self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
         self.vocab_size = config.vocab_size
 
-        self.bias_subspace = bias_subspace
-        self.bias_subspace.requires_grad = False
+        self.bias_subspace_tensors = bias_subspace_tensors
+        self.bias_subspace_tensors.requires_grad = False
 
-        vocab_tensors = self.word_embeddings(torch.tensor(range(0, config.vocab_size)))
-        self.normalize_norm = LA.norm(vocab_tensors, dim=0)
+        self.bias_transformations = torch.zeros(config.vocab_size, config.hidden_size)
+        self.scaling_coefs = torch.ones(config.vocab_size)
+        for i, scaling_token_ids_set in enumerate(scaling_token_ids_set_list):
+            bias_subspaces = bias_subspace_tensors[i].float()
+            for scaling_ids in scaling_token_ids_set:
+                embeddings = self.word_embeddings(torch.tensor(scaling_ids))
+
+                bias_norms = LA.norm(bias_subspaces[:k], dim=-1).view(-1, 1)
+                embed_norms = LA.norm(embeddings, dim=-1)
+                for i, token_id in enumerate(scaling_ids):
+                    embed_norm = embed_norms[i]
+                    self.bias_transformations[token_id] += (embeddings[i].unsqueeze(0).mm(bias_subspaces[:k].T).T * bias_subspaces[:k]  / bias_norms).sum(dim=0) * embed_norm
 
     def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
         if input_ids is not None:
@@ -85,12 +95,17 @@ class BertEmbeddingsWithDebias(nn.Module):
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
 
-        if self.bias_subspace is not None:
-            device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-            subspace_tensor = self.bias_subspace.view(1, 1, -1).repeat_interleave(input_ids.shape[1], dim=1).repeat_interleave(input_ids.shape[0], dim=0).to(device)
-            inputs_embeds -= subspace_tensor
-            inputs_embeds -= self.normalize_norm.view(1, 1, -1).repeat_interleave(input_ids.shape[1], dim=1).repeat_interleave(input_ids.shape[0], dim=0).to(device)
-            inputs_embeds /= LA.norm(inputs_embeds, dim=-1).view(*inputs_embeds.shape[:2], 1).repeat_interleave(inputs_embeds.shape[-1], dim=-1)
+        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+        bias_transformations = self.bias_transformations
+        cpu_input_ids = input_ids.detach().to("cpu")
+        transformation_tensors = bias_transformations.gather(dim=0, index=cpu_input_ids.view(-1, 1).repeat_interleave(inputs_embeds.shape[-1], dim=-1))
+        transformation_tensors = transformation_tensors.to(device)
+        # orig_norms = LA.norm(inputs_embeds, dim=-1)
+
+        inputs_embeds -= transformation_tensors
+        # transformed_norms = LA.norm(inputs_embeds, dim=-1)
+        # inputs_embeds *= (orig_norms / transformed_norms).view(*inputs_embeds.shape[:2], 1).repeat_interleave(inputs_embeds.shape[-1], dim=-1)
 
         position_embeddings = self.position_embeddings(position_ids)
         token_type_embeddings = self.token_type_embeddings(token_type_ids)
