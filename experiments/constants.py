@@ -62,8 +62,7 @@ GENDER_PAIRS = [
     ["feminins", "masculines"],
     ["mom", "dad"],
     ["she", "he"],
-    ["her", "his"],
-    ["her", "him"],
+    ["her", "his", "him"],
     ["herself", "himself"],
     ["mrs", "mr"],
     [

@@ -12,7 +12,7 @@ from transformers.models.bert.modeling_bert import BertEmbeddings
 from models import BertEmbeddingsWithDebias
 from tqdm import tqdm
 
-from identify_biased_subspace import SETS_LIST 
+from constants import SETS_LIST
 
 
 def read_data(input_file):

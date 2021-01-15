@@ -68,15 +68,30 @@ class BertEmbeddingsWithDebias(nn.Module):
         self.bias_transformations = torch.zeros(config.vocab_size, config.hidden_size)
         self.scaling_coefs = torch.ones(config.vocab_size)
         for i, scaling_token_ids_set in enumerate(scaling_token_ids_set_list):
-            bias_subspaces = bias_subspace_tensors[i].float()
-            for scaling_ids in scaling_token_ids_set:
-                embeddings = self.word_embeddings(torch.tensor(scaling_ids))
+            bias_subspaces = bias_subspace_tensors[i]
 
-                bias_norms = LA.norm(bias_subspaces[:k], dim=-1).view(-1, 1)
-                embed_norms = LA.norm(embeddings, dim=-1)
-                for i, token_id in enumerate(scaling_ids):
-                    embed_norm = embed_norms[i]
-                    self.bias_transformations[token_id] += (embeddings[i].unsqueeze(0).mm(bias_subspaces[:k].T).T * bias_subspaces[:k]  / bias_norms).sum(dim=0) * embed_norm
+            # embeddings = self.word_embeddings(torch.tensor(range(0, self.vocab_size)))
+            # bias_norms = LA.norm(bias_subspaces[:k], dim=-1).view(-1, 1)
+            # embed_norms = LA.norm(embeddings, dim=-1)
+
+            # all_scaling_ids = sum(scaling_token_ids_set, [])
+            # bias_token_masks = torch.ones(config.vocab_size, config.hidden_size)
+            # bias_token_masks[all_scaling_ids] *= 0
+
+            # self.bias_transformations += (((embeddings * bias_token_masks).mm(bias_subspaces[:k].T) @ bias_subspaces[:k] / bias_norms).T * embed_norms).T
+
+            for scaling_ids in scaling_token_ids_set:
+                biased_embeddings = self.word_embeddings(torch.tensor(scaling_ids, dtype=torch.long))
+                mean_embedding = biased_embeddings.mean(dim=0)
+
+                self.bias_transformations[scaling_ids] = biased_embeddings - mean_embedding
+
+                # bias_norms = LA.norm(bias_subspaces[:k], dim=-1).view(-1, 1)
+                # embed_norms = LA.norm(biased_embeddings, dim=-1)
+
+                # for i, token_id in enumerate(scaling_ids):
+                    # embed_norm = embed_norms[i]
+                    # self.bias_transformations[token_id] += (embeddings[i].unsqueeze(0).mm(bias_subspaces[:k].T).T * bias_subspaces[:k]  / bias_norms).sum(dim=0) * embed_norm
 
     def forward(self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None):
         if input_ids is not None:
@@ -99,10 +114,11 @@ class BertEmbeddingsWithDebias(nn.Module):
 
         bias_transformations = self.bias_transformations
         cpu_input_ids = input_ids.detach().to("cpu")
-        transformation_tensors = bias_transformations.gather(dim=0, index=cpu_input_ids.view(-1, 1).repeat_interleave(inputs_embeds.shape[-1], dim=-1))
+        transformation_tensors = bias_transformations[cpu_input_ids, :]
         transformation_tensors = transformation_tensors.to(device)
         # orig_norms = LA.norm(inputs_embeds, dim=-1)
 
+        import ipdb; ipdb.set_trace()
         inputs_embeds -= transformation_tensors
         # transformed_norms = LA.norm(inputs_embeds, dim=-1)
         # inputs_embeds *= (orig_norms / transformed_norms).view(*inputs_embeds.shape[:2], 1).repeat_interleave(inputs_embeds.shape[-1], dim=-1)
