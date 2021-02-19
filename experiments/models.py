@@ -2,12 +2,11 @@ import torch
 from torch import Tensor
 from torch import nn
 import torch.nn.functional as F
-import torch.linalg as LA
 
 
-"""
-"""
 class SentencePertubationNormalizer(nn.Module):
+    """
+    """
     def __init__(self, model: nn.Module, k: float = 0.01):
         super().__init__()
         self.model = model
@@ -52,6 +51,8 @@ class SentencePertubationNormalizer(nn.Module):
 
 
 class BertEmbeddingsWithDebias(nn.Module):
+    """
+    """
     def __init__(self, config, scaling_token_ids_set_list, bias_subspace_tensors, k=1):
         super().__init__()
         self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)

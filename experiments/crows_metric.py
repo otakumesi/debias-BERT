@@ -1,3 +1,8 @@
+"""
+Although I modified the code a bit for my experiment, this metric is copied from https://github.com/nyu-mll/crows-pairs/blob/master/metric.py because of license "CC BY-SA 4.0".
+Therefore, This credit is attributed in The Machine Learning for Language Group at NYU CILVR.
+"""
+
 import csv
 from pathlib import Path
 import json

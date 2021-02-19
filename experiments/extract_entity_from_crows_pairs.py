@@ -1,9 +1,7 @@
 import json
 from pathlib import Path
 from collections import defaultdict
-from operator import itemgetter
 from allennlp.predictors.predictor import Predictor
-import allennlp_models.tagging
 from datasets import load_dataset
 
 from constants import GENDER_PAIRS, RACE_SETS, RELIGION_SETS, NATIONALITY_SETS

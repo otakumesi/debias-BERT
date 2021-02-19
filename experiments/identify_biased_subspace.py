@@ -20,6 +20,8 @@ flags.DEFINE_integer("n_components", 10, "component number of PCA")
 
 
 class BiasSubSpaceIdentifier:
+    """
+    """
     def __init__(self, model, tokenizer):
         self.model = model
         self.tokenizer = tokenizer

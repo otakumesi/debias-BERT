@@ -69,20 +69,3 @@ class SeqClassificationDataArguments:
         default=False,
         metadata={"help": "Whether to use debiased dataset"}
     )
-
-@dataclass
-class MyTrainingArguments:
-    seed: int = field(default=42, metadata={"help": "Initialized random seed number"})
-    train_batch_size: int = field(
-        default=32, metadata={"help": "Batch Size for training"}
-    )
-    test_batch_size: int = field(default=32, metadata={"help": "Batch Size for test"})
-    num_epochs: int = field(default=20, metadata={"help": "Epoch Number for traing"})
-    learning_rate: float = field(default=10 - 5, metadata={"help": "Learning Rate"})
-
-
-@dataclass
-class WinobiasDataArguments:
-    task_type_number: int = field(
-        default=1, metadata={"help": "The number of task type in WinoBias"}
-    )

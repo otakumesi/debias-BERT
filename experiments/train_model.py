@@ -1,3 +1,6 @@
+"""
+"""
+
 from comet_ml import Experiment
 
 import logging
@@ -168,16 +171,6 @@ def train(model_args, data_args, train_args):
     orig_columns = ["input_ids", "token_type_ids", "attention_mask", "indices", "mask"]
     columns = [f"more_{c}" for c in orig_columns] + [f"less_{c}" for c in orig_columns]
     dataset.set_format(type="torch", columns=columns)
-
-    # model_original_parameters = {k:v for k, v in model.state_dict().items() if re.search(r"\w+\.layer\.\d+\..+\.(weight)", k)}
-    # {
-    #     "params": [
-    #         p - model_original_parameters[n]
-    #         for n, p in model.named_parameters()
-    #         if n in model_original_parameters
-    #     ],
-    #     "weight_decay": model_args.regular_weight_decay
-    # }
 
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
