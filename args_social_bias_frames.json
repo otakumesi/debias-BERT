@@ -12,5 +12,6 @@
   "logging_steps": 300,
   "do_train": true,
   "do_eval": true,
-  "do_predict": true
+  "do_predict": true,
+  "is_masking_words": false
 }
