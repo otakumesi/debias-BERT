@@ -5,6 +5,8 @@ import torch.nn.functional as F
 import torch.linalg as LA
 
 
+"""
+"""
 class SentencePertubationNormalizer(nn.Module):
     def __init__(self, model: nn.Module, k: float = 0.01):
         super().__init__()
@@ -118,7 +120,6 @@ class BertEmbeddingsWithDebias(nn.Module):
         transformation_tensors = transformation_tensors.to(device)
         # orig_norms = LA.norm(inputs_embeds, dim=-1)
 
-        import ipdb; ipdb.set_trace()
         inputs_embeds -= transformation_tensors
         # transformed_norms = LA.norm(inputs_embeds, dim=-1)
         # inputs_embeds *= (orig_norms / transformed_norms).view(*inputs_embeds.shape[:2], 1).repeat_interleave(inputs_embeds.shape[-1], dim=-1)
