@@ -4,10 +4,8 @@ from absl import flags
 from transformers import AutoModel, AutoTokenizer, AutoConfig
 import torch
 from sklearn.decomposition import PCA
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 import torch.linalg as LA
 
-from noise_reduction_pca import NoiseReductionPCA
 from utils import find_embedding_layer
 from constants import SETS_LIST
 
@@ -67,7 +65,7 @@ class BiasSubSpaceIdentifier:
     def __do_pca(self, target_embeds, n_components):
         matrix = target_embeds.detach().numpy()
 
-        pca = NoiseReductionPCA()
+        pca = PCA()
         pca.fit(matrix)
 
         return pca.components_[:n_components]
