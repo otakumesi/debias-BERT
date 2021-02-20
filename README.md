@@ -9,7 +9,6 @@ This repository has some experiments.
 * Sentence Pertubation Normalizer (will be published at ANLP2021)
 * Bias Subspace Transformation of the word embedding in BERT Embeddings
 * etc...
-...
 
 ## notes
 The environment of This repository is builded by poetry.  
