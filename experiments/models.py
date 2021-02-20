@@ -6,7 +6,9 @@ import torch.nn.functional as F
 
 class SentencePertubationNormalizer(nn.Module):
     """
-    This layer imprements the ...
+    This layer imprements the pertubation normalizer for sentence encoder.
+    We call varying the pre-trained sentence encoder representations overall by exchanging a few tokens "sentence perturbation."
+    So, the perturbation normalization means minimizing the representation variability between some tokens.
     """
     def __init__(self, model: nn.Module, k: float = 0.01):
         super().__init__()
@@ -65,6 +67,10 @@ class SentencePertubationNormalizer(nn.Module):
 
 class BertEmbeddingsWithDebias(nn.Module):
     """
+    This layer is augmentation of huggingface's BertEmbeddings.
+    We induce the bias subspace transformation into the BERT Embedding layer.
+    This inspired by [Man is to Computer Programmer as Woman is to Homemaker? Debiasing Word Embeddings](https://arxiv.org/abs/1607.06520)
+    of Bolukbasi et al., 2016.
     """
     def __init__(self, config, scaling_token_ids_set_list, bias_subspace_tensors, k=1):
         super().__init__()
