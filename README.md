@@ -5,14 +5,13 @@ This repository contains codes for our papers "文表現の摂動正規化: 事�
 The codes is to fine-tune BERT for debias and to visualize bias metrics on pre-trained language models.  
 
 ## Overview
+This repository has some experiments.
+* Sentence Pertubation Normalizer (will be published at ANLP2021)
+* Bias Subspace Transformation of the word embedding in BERT Embeddings
+* etc...
 ...
 
-## Setup
-We use poetry for building environments.  
-If you can use poetry, you execute commands below.  
-
-```
-poetry install
-
-wget https://raw.githubusercontent.com/nyu-mll/crows-pairs/master/data/crows_pairs_anonymized.csv -o data/crows_pairs_anonymized.csv
-```
+# notes
+The environment of This repository is builded by poetry.
+If you execute my experiments, you put appropriate data into `/data`, and you should run tasks in `/tasks`.
+Please ask me at Issue if you have anything you don't know.
