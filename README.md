@@ -10,7 +10,17 @@ This repository has some experiments.
 * Bias Subspace Transformation of the word embedding in BERT Embeddings
 * etc...
 
+#### about `*.ipynb`
+Related with ANLP
+* Analyze_GLUE.ipynb
+* Analyze_crows_pairs.ipynb
+
+Others
+* Model_Analyze.ipynb
+
+
+
 ## notes
-The environment of This repository is builded by poetry.  
+The environment of this repository is builded by poetry.  
 If you execute my experiments, you put appropriate data into `/data`, and you should run tasks in `/tasks`.  
 Please ask me at Issue if you have anything you don't know.  
