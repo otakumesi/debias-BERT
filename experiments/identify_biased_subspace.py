@@ -21,6 +21,10 @@ flags.DEFINE_integer("n_components", 10, "component number of PCA")
 
 class BiasSubSpaceIdentifier:
     """
+    This class calculate bias subspace based on
+    [Man is to Computer Programmer as Woman is to Homemaker? Debiasing Word Embeddings](https://arxiv.org/abs/1607.06520)
+    by Bolukbasi et al., 2016.
+    The original method use the GloVe embedding, we use the representation of the word embedding in the BERT Embedding layer.
     """
     def __init__(self, model, tokenizer):
         self.model = model
