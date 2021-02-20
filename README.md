@@ -11,7 +11,7 @@ This repository has some experiments.
 * etc...
 ...
 
-# notes
-The environment of This repository is builded by poetry.
-If you execute my experiments, you put appropriate data into `/data`, and you should run tasks in `/tasks`.
-Please ask me at Issue if you have anything you don't know.
+## notes
+The environment of This repository is builded by poetry.  
+If you execute my experiments, you put appropriate data into `/data`, and you should run tasks in `/tasks`.  
+Please ask me at Issue if you have anything you don't know.  
